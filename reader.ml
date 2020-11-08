@@ -27,18 +27,14 @@ let rec sexpr_eq s1 s2 =
   | Char(c1), Char(c2) -> c1 = c2
   | String(s1), String(s2) -> s1 = s2
   | Symbol(s1), Symbol(s2) -> s1 = s2
-  | Pair(car1, cdr1), Pair(car2, cdr2) -> (sexpr_eq car1 car2) && (sexpr_eq cdr1 cdr2);;
+  | Pair(car1, cdr1), Pair(car2, cdr2) -> (sexpr_eq car1 car2) && (sexpr_eq cdr1 cdr2)
+  | _ -> false;;
 
 module Reader: sig
   val read_sexprs : string -> sexpr list
   val comma : char list -> char * char list
   val colon : char list -> char * char list
   val dot : char list -> char * char list
-  | Pair(car1, cdr1), Pair(car2, cdr2) -> (sexpr_eq car1 car2) && (sexpr_eq cdr1 cdr2)
-  | _ -> false;;
-
-module Reader: sig
-  val read_sexprs : string -> sexpr list
 end
 = struct
 let normalize_scheme_symbol str =
