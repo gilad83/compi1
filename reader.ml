@@ -54,7 +54,7 @@ let comma = (char ',');;
 let colon = (char ':');;
 let dot = (char '.');;
 
-(*Star Atomic Parsers *)
+(*Stared Atomic Parsers *)
 let nt_star_whitespaces = star nt_whitespace;;
 
 let read_sexprs string = raise X_not_yet_implemented;;
