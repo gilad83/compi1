@@ -1,6 +1,6 @@
 
 #use "pc.ml";;
-
+open PC;;
 exception X_not_yet_implemented;;
 exception X_this_should_not_happen;;
   
@@ -27,9 +27,12 @@ let rec sexpr_eq s1 s2 =
   | String(s1), String(s2) -> s1 = s2
   | Symbol(s1), Symbol(s2) -> s1 = s2
   | Pair(car1, cdr1), Pair(car2, cdr2) -> (sexpr_eq car1 car2) && (sexpr_eq cdr1 cdr2);;
-  
+
 module Reader: sig
   val read_sexprs : string -> sexpr list
+  val comma : char list -> char * char list
+  val colon : char list -> char * char list
+  val dot : char list -> char * char list
 end
 = struct
 let normalize_scheme_symbol str =
@@ -39,6 +42,14 @@ let normalize_scheme_symbol str =
 	s) then str
   else Printf.sprintf "|%s|" str;;
 
+
+(* Atomic Parsers *)
+let comma = (char ',');;
+let colon = (char ':');;
+let dot = (char '.');;
+
+(*Star Atomic Parsers *)
+let nt_star_whitespaces = star nt_whitespace;;
 
 let read_sexprs string = raise X_not_yet_implemented;;
   

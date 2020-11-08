@@ -1,0 +1,6 @@
+#use "topfind";;
+
+let directives () =
+  Hashtbl.iter
+  (fun k _v -> print_endline k)
+  Toploop.directive_table;;
