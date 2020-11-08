@@ -4,7 +4,7 @@ open PC;;
 
 exception X_not_yet_implemented;;
 exception X_this_should_not_happen;;
-  
+
 type number =
   | Fraction of int * int
   | Float of float;;
@@ -32,9 +32,16 @@ let rec sexpr_eq s1 s2 =
 
 module Reader: sig
   val read_sexprs : string -> sexpr list
+  (* Atomic Parsers *)
   val comma : char list -> char * char list
   val colon : char list -> char * char list
   val dot : char list -> char * char list
+  (*Stared Atomic Parsers *)
+  val nt_star_whitespaces : char list -> char list * char list
+  (* complex Parcsers *)
+  val make_paired : ('a -> 'b * 'c) -> ('d -> 'e * 'f) -> ('c -> 'g * 'd) -> 'a -> 'g * 'f 
+  val make_spaced : (char list -> 'a * char list) -> char list -> 'a * char list
+  val nt_boolean : char list -> sexpr * char list
 end
 = struct
 let normalize_scheme_symbol str =
@@ -50,9 +57,36 @@ let comma = (char ',');;
 let colon = (char ':');;
 let dot = (char '.');;
 
+
 (*Stared Atomic Parsers *)
 let nt_star_whitespaces = star nt_whitespace;;
+
+(* complex Parcsers *)
+let nt_boolean  = 
+  let bool_tok = make_spaced (disj ( word_ci "#f")  (word_ci "#t")) in
+  pack bool_tok (fun (bool_t) -> Bool (string_to_bool (bool_t)));;
+
+let make_paired nt_left nt_right nt =
+  let nt = caten nt_left nt in
+  let nt = pack nt (function (_, e) -> e) in
+  let nt = caten nt nt_right in
+  let nt = pack nt (function (e, _) -> e) in
+  nt;;
+
+let make_spaced nt =
+  make_paired nt_star_whitespaces nt_star_whitespaces nt;;
+(* --- end of parsers --- *)
+(*helper functions  *)
+let pair_to_bool (lst , _) =
+  let  str = list_to_string(lst) in
+  if str = "#t" || str = "#T" then true else false;;
+
+let string_to_bool lst  =
+  let  str = list_to_string(lst) in
+  if str = "#t" || str = "#T" then true else false;;
+
 
 let read_sexprs string = raise X_not_yet_implemented;;
   
 end;; (* struct Reader *)
+open Reader;;
