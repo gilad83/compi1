@@ -29,34 +29,6 @@ let rec sexpr_eq s1 s2 =
   | Symbol(s1), Symbol(s2) -> s1 = s2
   | Pair(car1, cdr1), Pair(car2, cdr2) -> (sexpr_eq car1 car2) && (sexpr_eq cdr1 cdr2);;
 
-<<<<<<< HEAD
-(************* our functions *************)
-let ascii_0 = 48;;
-
-let nt_whitespaces = star nt_whitespace;;
-
-let digit = range '0' '9';;
-
-let digit_seq = plus digit;;
-
-(* fold_left func [] [0,0,0,1,2,0] *)
-
-let zero = const (fun ch -> ch = '0');;
-
-let zeros = star zero;;
-
-let natural s = 
-  let (zrs, rest) = (zeros s) in
-  List.fold_left 
-    (pack digit (fun ch -> (int_of_char ch) - ascii_0))
-    nt_epsilon
-    rest;;
-
-(* let integer = caten sign natural_num;; *)
-
-let mantissa = digit_seq;;
-(************* end of our functions *************)
-=======
 module Reader: sig
   val read_sexprs : string -> sexpr list
   val comma : char list -> char * char list
@@ -64,7 +36,6 @@ module Reader: sig
   val dot : char list -> char * char list
   | Pair(car1, cdr1), Pair(car2, cdr2) -> (sexpr_eq car1 car2) && (sexpr_eq cdr1 cdr2)
   | _ -> false;;
->>>>>>> 045032dbb345be52d8a26fd940cf4c50e1dad4ba
 
 module Reader: sig
   val read_sexprs : string -> sexpr list
@@ -91,5 +62,32 @@ let dot = (char '.');;
 let nt_star_whitespaces = star nt_whitespace;;
 
 let read_sexprs string = raise X_not_yet_implemented;;
-  
+
+
+(************* number parsers *************)
+let ascii_0 = 48;;
+
+let digit = range '0' '9';;
+
+let digit_seq = plus digit;;
+
+(* fold_left func [] [0,0,0,1,2,0] *)
+
+let zero = const (fun ch -> ch = '0');;
+
+let zeros = star zero;;
+
+let natural s = 
+  let (zrs, rest) = (zeros s) in
+  List.fold_left 
+    (pack digit (fun ch -> (int_of_char ch) - ascii_0))
+    nt_epsilon
+    rest;;
+
+(* let integer = caten sign natural_num;; *)
+
+let mantissa = digit_seq;;
+(************* end of number parsers *************)
+
+
 end;; (* struct Reader *)
