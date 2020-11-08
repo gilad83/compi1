@@ -52,6 +52,15 @@ let normalize_scheme_symbol str =
   else Printf.sprintf "|%s|" str;;
 
 
+(*helper functions  *)
+let pair_to_bool (lst , _) =
+  let  str = list_to_string(lst) in
+  if str = "#t" || str = "#T" then true else false;;
+
+let bool_of_string lst  =
+  let  str = list_to_string(lst) in
+  if str = "#t" || str = "#T" then true else false;;
+
 (* Atomic Parsers *)
 let comma = (char ',');;
 let colon = (char ':');;
@@ -62,9 +71,6 @@ let dot = (char '.');;
 let nt_star_whitespaces = star nt_whitespace;;
 
 (* complex Parcsers *)
-let nt_boolean  = 
-  let bool_tok = make_spaced (disj ( word_ci "#f")  (word_ci "#t")) in
-  pack bool_tok (fun (bool_t) -> Bool (string_to_bool (bool_t)));;
 
 let make_paired nt_left nt_right nt =
   let nt = caten nt_left nt in
@@ -75,15 +81,14 @@ let make_paired nt_left nt_right nt =
 
 let make_spaced nt =
   make_paired nt_star_whitespaces nt_star_whitespaces nt;;
-(* --- end of parsers --- *)
-(*helper functions  *)
-let pair_to_bool (lst , _) =
-  let  str = list_to_string(lst) in
-  if str = "#t" || str = "#T" then true else false;;
 
-let string_to_bool lst  =
-  let  str = list_to_string(lst) in
-  if str = "#t" || str = "#T" then true else false;;
+
+
+let nt_boolean  = 
+  let bool_tok = make_spaced (disj ( word_ci "#f")  (word_ci "#t")) in
+  pack bool_tok (fun (bool_t) -> Bool (bool_of_string (bool_t)));;  
+(* --- end of parsers --- *)
+
 
 
 let read_sexprs string = raise X_not_yet_implemented;;
