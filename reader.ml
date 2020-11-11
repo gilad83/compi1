@@ -1,6 +1,7 @@
 
 #use "pc.ml";;
 open PC;;
+#use "helperFunctions.ml";;
 
 exception X_not_yet_implemented;;
 exception X_this_should_not_happen;;
@@ -96,6 +97,10 @@ let nt_boolean  =
   pack bool_tok (fun (bool_t) -> Bool (bool_of_string (bool_t)));;  
 
 
+
+(* let nt_symbol = 
+  let symbol_tok = caten nt_star_whitespaces ( range_ci_lowercase_ascii 'a' 'z' ) in
+  pack symbol_tok = (fun (symbol_tok) -> Symbol(symbol_tok));;  *)
 (* --- end of parsers --- *)
 
 

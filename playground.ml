@@ -1,6 +1,5 @@
 
 #use "pc.ml";;
-
 open PC;;
 
 let nt_whitespace = const (fun ch -> ch <= ' ');;
@@ -88,3 +87,21 @@ let nt_expr =
 					      es) in
     nt s in
   nt_L0;;
+let 
+
+  let lowercase_ascii  =
+    let delta = int_of_char 'A' - int_of_char 'a' in
+    fun ch ->
+    if ('A' <= ch && ch <= 'Z')
+    then char_of_int ((int_of_char ch) - delta)
+    else ch;;
+
+  let make_range leq ch1 ch2 (s : char list) =
+    const (fun ch -> (leq ch1 ch) && (leq ch ch2)) ( (s));;
+  
+  let range = make_range (fun ch1 ch2 -> ch1 <= ch2);;
+  
+  let range_ci =
+    make_range (fun ch1 ch2 ->
+          (lowercase_ascii ch1) <=
+      (lowercase_ascii ch2));;
