@@ -97,20 +97,38 @@ end;; (* struct Reader *)
 
 (************* number parsers *************)
 let ascii_0 = 48;;
+let nt_digit ch = (int_of_char ch) - ascii_0;;
 let digit = range '0' '9';;
 let digits = plus digit;;
 let zero = const (fun ch -> ch = '0');;
 let zeros = star zero;;
-let nt_digit = (fun ch -> (int_of_char ch) - ascii_0);;
 
-let natural s = 
-  let (ds, rest) = (digits s) in
-  let (zrs, rest) = (zeros ds) in
-  pack nt_digit (fun rest -> List.fold_left (fun a b -> 10*a+b) 0 rest);;
+(* let nt_number =;; *)
 
-(* let integer = caten sign natural_num;; *)
+let nt_natural = 
+  pack digits (fun arr -> int_of_string (list_to_string arr));;
 
-let mantissa = digits;;
+let nt_sign s = 
+  let nt_s = const (fun ch -> ch = '-' || ch = '+') in
+  let (sign, rest) = (maybe nt_s s) in
+  match sign with
+  | Some '-' -> (-1, rest)
+  | Some '+' -> (1, rest)
+  | _ -> (1, rest);;
+
+let nt_signed_natural s = 
+  let (sign, dgts) = (nt_sign s) in
+  let (num, rest) = (nt_natural dgts) in
+  (sign*num, rest);;
+
+
+(* number parsers without combina *)
+(* let nt_natural s = 
+  pack digits (fun dgts -> List.fold_left (fun a b -> 10*a+(nt_digit b)) 0 dgts) s;;
+
+let nt_mantissa s = 
+  pack digits (fun dgts -> List.fold_right (fun a b -> float((nt_digit a)+b) /. 10.0) dgts 0) s;; *)
+
 (************* end of number parsers *************)
 
 
