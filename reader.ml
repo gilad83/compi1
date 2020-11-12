@@ -1,7 +1,7 @@
 
 #use "pc.ml";;
 open PC;;
-#use "helperFunctions.ml";;
+(* #use "helperFunctions.ml";; *)
 
 exception X_not_yet_implemented;;
 exception X_this_should_not_happen;;
@@ -41,11 +41,12 @@ module Reader: sig
   val semi_colon : char list -> char * char list
   (*Stared Atomic Parsers *)
   val nt_star_whitespaces : char list -> char list * char list
-  (* complex Parcsers *)
+  (* complex Parsers *)
   val make_paired : ('a -> 'b * 'c) -> ('d -> 'e * 'f) -> ('c -> 'g * 'd) -> 'a -> 'g * 'f 
   val make_spaced : (char list -> 'a * char list) -> char list -> 'a * char list
-  val nt_line_comment : char list -> (char * char list) * char list
+  val nt_line_comment : char list -> sexpr * 'a list
   val nt_boolean : char list -> sexpr * char list
+  val nt_symbol : char list -> sexpr * char list
 end
 = struct
 let normalize_scheme_symbol str =
@@ -79,7 +80,7 @@ let nt_star_whitespaces = star nt_whitespace;;
 let nt_star_only_space = star (char ' ' );;
 
 
-(* complex Parcsers *)
+(* complex Parsers *)
 let make_paired nt_left nt_right nt =
   let nt = caten nt_left nt in
   let nt = pack nt (function (_, e) -> e) in
@@ -90,7 +91,9 @@ let make_spaced nt =
   make_paired nt_star_whitespaces nt_star_whitespaces nt;;
 
 let nt_line_comment = 
-  (caten semi_colon (star nt_no_new_line));;
+  let nt = caten (caten semi_colon (star nt_no_new_line)) nt_end_of_input in 
+  let nt = pack nt (fun e -> Nil) in
+  nt;;
 
 let nt_boolean  = 
   let bool_tok = make_spaced (disj ( word_ci "#f")  (word_ci "#t"))  in
@@ -98,9 +101,21 @@ let nt_boolean  =
 
 
 
-(* let nt_symbol = 
-  let symbol_tok = caten nt_star_whitespaces ( range_ci_lowercase_ascii 'a' 'z' ) in
-  pack symbol_tok = (fun (symbol_tok) -> Symbol(symbol_tok));;  *)
+ let nt_symbol = 
+  let nt_letters = disj (range 'A' 'Z')  (range 'a' 'z') in
+  let upper_to_lower_case = pack nt_letters lowercase_ascii in
+  let punct = disj_list [char '?';char '/';char '<';char '>';char '+';char '=' ;char '_' ;
+    char '-';char '*';char '^';char '$';char '!';] in
+  let digitG = range '0' '9' in
+  let nt = disj_list[digitG;upper_to_lower_case;punct] in
+  let nt = caten nt (star (disj_list [dot;nt]))in
+  let nt = pack nt (fun (c,e) -> let string_of_e = list_to_string e in
+  let string_of_e = String.make 1 c ^ string_of_e in Symbol(string_of_e)) in 
+  nt;;
+ 
+
+
+
 (* --- end of parsers --- *)
 
 
