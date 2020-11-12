@@ -228,3 +228,22 @@ let nt_string =
   pack pc (fun arr -> list_to_string arr);;
 
 (****************** End of string pareser ******************)
+
+(***************** Char parser ******************)
+let visible_char = const (fun c -> (int_of_char c) > 32);;
+let hashtag = (char '#');;
+let double_slash = (char '\\');;
+let prefix = caten hashtag double_slash;;
+let named_char = disj_list [
+  pack (word_ci "space") (fun e -> char_of_int 32);
+  pack (word_ci "page") (fun e -> char_of_int 12);
+  pack (word_ci "tab") (fun e -> char_of_int 9);
+  pack (word_ci "return") (fun e -> char_of_int 13);
+  pack (word_ci "newline") (fun e -> char_of_int 10);
+  pack (word_ci "nul") (fun e -> char_of_int 0)] ;;
+let nt_char = 
+  let nt = (disj visible_char named_char ) in
+  let nt = pack (caten prefix nt ) (fun (_,e) -> Char(e)) in nt;;
+
+
+(*****************End of Char parser ******************)
