@@ -104,31 +104,56 @@ let read_sexprs string = raise X_not_yet_implemented;;
 end;; (* struct Reader *)
 
 
+
+open Reader;;
+
 (************* number parsers *************)
-let ascii_0 = 48;;
-let nt_digit ch = (int_of_char ch) - ascii_0;;
 let digit = range '0' '9';;
 let digits = plus digit;;
-let zero = const (fun ch -> ch = '0');;
-let zeros = star zero;;
+let rec gcd a b = 
+  if b = 0
+  then a
+  else gcd b (a mod b);;
 
-(* let nt_number =;; *)
 
 let nt_natural = 
   pack digits (fun arr -> int_of_string (list_to_string arr));;
 
-let nt_sign s = 
+  let nt_sign s = 
   let nt_s = const (fun ch -> ch = '-' || ch = '+') in
   let (sign, rest) = (maybe nt_s s) in
   match sign with
   | Some '-' -> (-1, rest)
   | Some '+' -> (1, rest)
   | _ -> (1, rest);;
-
-let nt_signed_natural s = 
+  
+  let nt_signed_nat s = 
   let (sign, dgts) = (nt_sign s) in
   let (num, rest) = (nt_natural dgts) in
   (sign*num, rest);;
+  
+  let nt_integer s =
+  let (num, rest) = (nt_signed_nat s) in
+  (Number(Fraction(num, 1)), rest);;
+
+  let nt_fraction s =
+    let nt_frac = const (fun ch -> ch = '/') in
+  let (numerator, rest) = (nt_signed_nat s) in
+  let (ch, rest) = (nt_frac rest) in
+  let (denominator, rest) = (nt_signed_nat rest) in
+  let n = gcd numerator denominator in
+  (Number(Fraction(numerator/n, denominator/n)), rest);;
+  
+let nt_float s = 
+  let (sign, rest) = (nt_sign s) in
+  let (integer, mantissa) = (digits rest) in
+  let (d, mantissa) = (dot mantissa) in
+  let (mantissa, rest) = (digits mantissa) in
+  let num = List.append integer (d::mantissa) in
+  (Number(Float(float(sign)*.(float_of_string (list_to_string num)))), rest);;
+  
+  let nt_number = disj nt_float (disj nt_fraction nt_integer);;
+
 
 
 (* number parsers without combina *)
@@ -139,6 +164,3 @@ let nt_mantissa s =
   pack digits (fun dgts -> List.fold_right (fun a b -> float((nt_digit a)+b) /. 10.0) dgts 0) s;; *)
 
 (************* end of number parsers *************)
-
-
-open Reader;;
