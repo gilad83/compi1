@@ -181,3 +181,35 @@ let nt_mantissa s =
   pack digits (fun dgts -> List.fold_right (fun a b -> float((nt_digit a)+b) /. 10.0) dgts 0) s;; *)
 
 (************* end of number parsers *************)
+
+
+
+(***************** String parser ******************)
+let nt_meta_char = 
+  let meta_chars = ["\\r"; "\\n"; "\\t"; "\\f"; "\\\\"; "\\\""] in
+  let meta_pc_list = List.map word_ci meta_chars in
+  let meta_pc = disj_list meta_pc_list in
+  pack meta_pc (fun parsed -> 
+    let expr = list_to_string (List.map lowercase_ascii parsed) in
+    match expr with
+    | "\\r" -> '\013'
+    | "\\n" -> '\010'
+    | "\\t" -> '\009'
+    | "\\f" -> '\012'
+    | "\\\\" -> '\092'
+    | "\\\"" -> '\034'
+    | _ -> '\000'
+  );;
+
+let nt_lit_char = 
+  let nt_all_chars = const (fun ch -> true) in
+  let nt_no_lit = disj (char '\"') (char '\\') in 
+  diff nt_all_chars nt_no_lit;;
+
+let nt_string_char = disj nt_meta_char nt_lit_char;;
+
+let nt_string = 
+  let pc = star nt_string_char in
+  pack pc (fun arr -> list_to_string arr);;
+
+(****************** End of string pareser ******************)
