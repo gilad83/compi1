@@ -124,7 +124,7 @@ let rec gcd a b =
 let nt_natural = 
   pack digits (fun arr -> int_of_string (list_to_string arr));;
 
-  let nt_sign s = 
+let nt_sign s = 
   let nt_s = const (fun ch -> ch = '-' || ch = '+') in
   let (sign, rest) = (maybe nt_s s) in
   match sign with
@@ -132,32 +132,44 @@ let nt_natural =
   | Some '+' -> (1, rest)
   | _ -> (1, rest);;
   
-  let nt_signed_nat s = 
+let nt_signed_nat s = 
   let (sign, dgts) = (nt_sign s) in
   let (num, rest) = (nt_natural dgts) in
   (sign*num, rest);;
   
-  let nt_integer s =
-  let (num, rest) = (nt_signed_nat s) in
-  (Number(Fraction(num, 1)), rest);;
+let nt_scientific_exp s = 
+  let nt_e = const (fun ch -> ch = 'e' || ch = 'E') in
+  let (e, rest) = (nt_e s) in
+  (nt_signed_nat rest);;
 
-  let nt_fraction s =
-    let nt_frac = const (fun ch -> ch = '/') in
+let nt_integer s =
+  let (num, rest) = (nt_signed_nat s) in
+  try 
+    let (exp, rest) = (nt_scientific_exp rest) in
+    (Number(Float(float(num) *. 10.0 ** float(exp))), rest)
+  with X_no_match -> (Number(Fraction(num, 1)), rest);;
+
+let nt_fraction s =
+  let nt_frac = const (fun ch -> ch = '/') in
   let (numerator, rest) = (nt_signed_nat s) in
   let (ch, rest) = (nt_frac rest) in
   let (denominator, rest) = (nt_signed_nat rest) in
   let n = gcd numerator denominator in
   (Number(Fraction(numerator/n, denominator/n)), rest);;
-  
+
 let nt_float s = 
   let (sign, rest) = (nt_sign s) in
   let (integer, mantissa) = (digits rest) in
   let (d, mantissa) = (dot mantissa) in
   let (mantissa, rest) = (digits mantissa) in
   let num = List.append integer (d::mantissa) in
-  (Number(Float(float(sign)*.(float_of_string (list_to_string num)))), rest);;
+  try
+    let (exp, rest) = (nt_scientific_exp rest) in
+    (Number(Float(float(sign)*.(float_of_string (list_to_string num)) *. 10.0 ** float(exp))), rest)
+  with X_no_match -> (Number(Float(float(sign)*.(float_of_string (list_to_string num)))), rest);;
+
   
-  let nt_number = disj nt_float (disj nt_fraction nt_integer);;
+let nt_number = disj nt_float (disj nt_fraction nt_integer);;
 
 
 
