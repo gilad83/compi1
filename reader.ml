@@ -44,7 +44,7 @@ module Reader: sig
   (* complex Parsers *)
   val make_paired : ('a -> 'b * 'c) -> ('d -> 'e * 'f) -> ('c -> 'g * 'd) -> 'a -> 'g * 'f 
   val make_spaced : (char list -> 'a * char list) -> char list -> 'a * char list
-  val nt_line_comment : char list -> sexpr * 'a list
+  val nt_line_comment : char list -> sexpr * char list
   val nt_boolean : char list -> sexpr * char list
   val nt_symbol : char list -> sexpr * char list
 end
@@ -71,7 +71,7 @@ let comma = (char ',');;
 let colon = (char ':');;
 let dot = (char '.');;
 let semi_colon = (char ';');;
-let nt_no_new_line = const (fun ch -> ch != '\n');;
+let nt_no_new_line = const (fun ch -> ch != char_of_int 10);;
 let nt_only_space = (char ' ' );;
 
 
@@ -91,7 +91,10 @@ let make_spaced nt =
   make_paired nt_star_whitespaces nt_star_whitespaces nt;;
 
 let nt_line_comment = 
-  let nt = caten (caten semi_colon (star nt_no_new_line)) nt_end_of_input in 
+  let nt_end_of_line = (char (char_of_int 10)) in
+  let comment_end = disj nt_end_of_line (pack nt_end_of_input (fun (e) -> 'e')) in
+  let nt = caten  semi_colon (star nt_no_new_line) in
+  let nt = caten nt comment_end in
   let nt = pack nt (fun e -> Nil) in
   nt;;
 
@@ -230,11 +233,11 @@ let nt_string =
 (****************** End of string pareser ******************)
 
 (***************** Char parser ******************)
-let visible_char = const (fun c -> (int_of_char c) > 32);;
+let vis_char = const (fun c -> (int_of_char c) > 32);;
 let hashtag = (char '#');;
 let double_slash = (char '\\');;
 let prefix = caten hashtag double_slash;;
-let named_char = disj_list [
+let name_char = disj_list [
   pack (word_ci "space") (fun e -> char_of_int 32);
   pack (word_ci "page") (fun e -> char_of_int 12);
   pack (word_ci "tab") (fun e -> char_of_int 9);
@@ -242,8 +245,22 @@ let named_char = disj_list [
   pack (word_ci "newline") (fun e -> char_of_int 10);
   pack (word_ci "nul") (fun e -> char_of_int 0)] ;;
 let nt_char = 
-  let nt = (disj visible_char named_char ) in
+  let nt = (disj name_char vis_char ) in
   let nt = pack (caten prefix nt ) (fun (_,e) -> Char(e)) in nt;;
 
 
 (*****************End of Char parser ******************)
+
+(***************** Nil parser ******************)
+
+let lparen = (char '(');;
+let rparen = (char ')');;
+(* let inside = disj_list [nt_line_comment;pack nt_whitespace (fun e -> Nil)];; *)
+let nt_Nil =
+  let nt = caten lparen nt_star_whitespaces in
+  let nt = caten nt (star nt_line_comment) in
+  let nt = caten nt nt_star_whitespaces in 
+  let nt = caten nt rparen in 
+  let nt = pack nt (fun e -> Nil) in nt ;;
+
+(*****************End of Nil parser ******************)
