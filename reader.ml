@@ -229,7 +229,19 @@ let nt_string =
   let pc = star nt_string_char in
   pack pc (fun arr -> list_to_string arr);;
 
-(****************** End of string pareser ******************)
+(****************** End of string parser ******************)
+
+
+
+(****************** Quote parser ******************)
+let nt_quoted = caten (const (fun ch -> ch = ''')) nt_sexpr;;
+
+let nt_quasiQuoted = caten (const (fun ch -> ch = '`')) nt_sexpr;;
+
+let nt_unquoted = caten (const (fun ch -> ch = ',')) nt_sexpr;;
+
+let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;;
+(****************** End of Quote parser ******************)
 
 (***************** Char parser ******************)
 let vis_char = const (fun c -> (int_of_char c) > 32);;
@@ -263,9 +275,3 @@ let nt_Nil =
   let nt = pack nt (fun e -> Nil) in nt ;;
 
 (*****************End of Nil parser ******************)
-
-(***************** Pair parser ******************)
-
-
-
-(***************** End of Pair parser ******************)
