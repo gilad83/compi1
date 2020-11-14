@@ -227,21 +227,12 @@ let nt_string_char = disj nt_meta_char nt_lit_char;;
 
 let nt_string = 
   let pc = star nt_string_char in
-  pack pc (fun arr -> list_to_string arr);;
+  pack pc (fun arr -> String(list_to_string arr));;
 
 (****************** End of string parser ******************)
 
 
 
-(****************** Quote parser ******************)
-let nt_quoted = caten (const (fun ch -> ch = ''')) nt_sexpr;;
-
-let nt_quasiQuoted = caten (const (fun ch -> ch = '`')) nt_sexpr;;
-
-let nt_unquoted = caten (const (fun ch -> ch = ',')) nt_sexpr;;
-
-let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;;
-(****************** End of Quote parser ******************)
 
 (***************** Char parser ******************)
 let vis_char = const (fun c -> (int_of_char c) > 32);;
@@ -275,3 +266,41 @@ let nt_Nil =
   let nt = pack nt (fun e -> Nil) in nt ;;
 
 (*****************End of Nil parser ******************)
+
+
+
+(***************** Sexp bug ******************)
+let nt_garbage str = 
+  (* let grabage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment;nt_sexp_comment] *)
+  let grabage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in 
+  grabage;;
+  
+
+let rec nt_sexpr s = 
+  (* let nt_general = disj_list [nt_boolean;nt_char;nt_number;nt_string;nt_symbol; *)
+  (* nt_Nil,nt_list;nt_dotted_list;nt_quoted;nt_q_quoted;nt_unquoted;nt_unquoted_spliced] in *)
+  let nt_general = disj_list [nt_boolean;nt_char;nt_number;nt_string;nt_symbol;nt_Nil;nt_list] in
+  (nt_garbage nt_general ) s
+  and nt_list str = 
+  let inside = (star nt_sexpr) in 
+  let nt = caten lparen inside in
+  let nt = caten nt rparen in 
+  let nt = pack nt (fun (_,(_,e))  ->
+    List.fold_right (fun first_sexp second_sexp -> Pair(first_sexp,second_sexp)) e Nil) in 
+    nt str;;
+
+
+
+
+
+(*****************  end of Sexp  ******************)
+
+(****************** Quote parser ******************)
+(* let nt_quoted = caten (const (fun ch -> ch = ''')) nt_sexpr;;
+
+let nt_quasiQuoted = caten (const (fun ch -> ch = '`')) nt_sexpr;;
+
+let nt_unquoted = caten (const (fun ch -> ch = ',')) nt_sexpr;;
+
+let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;; *)
+(****************** End of Quote parser ******************)
