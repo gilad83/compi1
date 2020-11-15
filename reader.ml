@@ -333,16 +333,17 @@ let read_sexprs string =
 
 
 end;; (* struct Reader *)
+open Reader;;
 (* test zone *)
 let lparen = (char '(');;
 let rparen = (char ')');;
 let dot = (char '.');;
-let dotted_list  = 
+(* let dotted_list  = 
       let garbage = (pack nt_whitespace (fun e -> Nil)) in 
       let dot_spaced = caten  garbage (caten dot garbage)  in
       let inside = caten (nt_boolean) (caten dot_spaced nt_boolean) in
       let nt = caten lparen (caten inside rparen) in 
-      nt ;;
+      nt ;; *)
 
 let dotted_list_sym  = 
   let garbage = (pack nt_whitespace (fun e -> Nil)) in 
@@ -352,4 +353,3 @@ let dotted_list_sym  =
   nt ;;
   
 (* test zone *)
-open Reader;;
