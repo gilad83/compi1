@@ -31,6 +31,7 @@ let rec sexpr_eq s1 s2 =
   | _ -> false;;
 
 module Reader: sig
+  val read_sexpr : string -> sexpr
   val read_sexprs : string -> sexpr list
   (* Atomic Parsers *)
   val comma : char list -> char * char list
@@ -46,8 +47,11 @@ module Reader: sig
   val nt_line_comment : char list -> sexpr * char list
   val nt_boolean : char list -> sexpr * char list
   val nt_symbol : char list -> sexpr * char list
+  val nt_number : char list -> sexpr * char list
+  val nt_string : char list -> sexpr * char list
 end
 = struct
+
 let normalize_scheme_symbol str =
   let s = string_to_list str in
   if (andmap
@@ -98,7 +102,7 @@ let nt_line_comment =
   nt;;
 
 let nt_boolean  = 
-  let bool_tok = make_spaced (disj ( word_ci "#f")  (word_ci "#t"))  in
+  let bool_tok =  disj ( word_ci "#f")  (word_ci "#t")  in
   pack bool_tok (fun (bool_t) -> Bool (bool_of_string (bool_t)));;  
 
 
@@ -116,19 +120,7 @@ let nt_boolean  =
   nt;;
  
 
-
-
-(* --- end of parsers --- *)
-
-
-
-let read_sexprs string = raise X_not_yet_implemented;;
-end;; (* struct Reader *)
-
-
-
-open Reader;;
-
+(* moved inside  *)
 (************* number parsers *************)
 let digit = range '0' '9';;
 let digits = plus digit;;
@@ -226,8 +218,11 @@ let nt_lit_char =
 let nt_string_char = disj nt_meta_char nt_lit_char;;
 
 let nt_string = 
+  let d_qoute = char (char_of_int (34)) in
   let pc = star nt_string_char in
-  pack pc (fun arr -> String(list_to_string arr));;
+  let pc = caten d_qoute pc in
+  let pc = caten pc d_qoute in
+  pack pc (fun ((_,arr),_) -> String(list_to_string arr));;
 
 (****************** End of string parser ******************)
 
@@ -258,36 +253,15 @@ let nt_char =
 let lparen = (char '(');;
 let rparen = (char ')');;
 (* let inside = disj_list [nt_line_comment;pack nt_whitespace (fun e -> Nil)];; *)
-let nt_Nil =
-  let nt = caten lparen nt_star_whitespaces in
-  let nt = caten nt (star nt_line_comment) in
-  let nt = caten nt nt_star_whitespaces in 
-  let nt = caten nt rparen in 
-  let nt = pack nt (fun e -> Nil) in nt ;;
+
 
 (*****************End of Nil parser ******************)
 
 
 
 (***************** Sexp bug ******************)
-let nt_garbage str = 
-  (* let grabage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment;nt_sexp_comment] *)
-  let grabage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in 
-  grabage;;
-  
 
-let rec nt_sexpr s = 
-  (* let nt_general = disj_list [nt_boolean;nt_char;nt_number;nt_string;nt_symbol; *)
-  (* nt_Nil,nt_list;nt_dotted_list;nt_quoted;nt_q_quoted;nt_unquoted;nt_unquoted_spliced] in *)
-  let nt_general = disj_list [nt_boolean;nt_char;nt_number;nt_string;nt_symbol;nt_Nil;nt_list] in
-  (nt_garbage nt_general ) s
-  and nt_list str = 
-  let inside = (star nt_sexpr) in 
-  let nt = caten lparen inside in
-  let nt = caten nt rparen in 
-  let nt = pack nt (fun (_,(_,e))  ->
-    List.fold_right (fun first_sexp second_sexp -> Pair(first_sexp,second_sexp)) e Nil) in 
-    nt str;;
+  
 
 
 
@@ -304,3 +278,78 @@ let nt_unquoted = caten (const (fun ch -> ch = ',')) nt_sexpr;;
 
 let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;; *)
 (****************** End of Quote parser ******************)
+(* (moved inside) *)
+
+  let rec nt_sexpr s = 
+    (* let nt_general = disj_list [nt_boolean;nt_char;nt_number;nt_string;nt_symbol; *)
+    (* nt_Nil,nt_list;nt_dotted_list;nt_quoted;nt_q_quoted;nt_unquoted;nt_unquoted_spliced] in *)
+    let nt_general = disj_list [nt_boolean;nt_char;nt_string;nt_number;nt_symbol;nt_Nil;nt_list;nt_dotted_list] in
+    (nt_garbage nt_general ) s
+    and nt_list str = 
+      let inside = (star nt_sexpr) in 
+      let nt = caten lparen inside in
+      let nt = caten nt rparen in 
+      let nt = pack nt (fun ((_,e),_)  ->
+        List.fold_right (fun first_sexp second_sexp -> Pair(first_sexp,second_sexp)) e Nil) in 
+      nt str
+    and nt_dotted_list str = 
+      let garbage = (pack nt_whitespace (fun e -> Nil)) in 
+      let dot_spaced = caten garbage (caten dot garbage)  in
+      let inside = caten (plus nt_sexpr) (caten dot_spaced nt_sexpr) in
+      let nt = caten lparen (caten inside rparen) in 
+      (* let nt = pack nt (fun (_,(e,(_,(last,_))))  -> 
+      List.fold_right (fun first_sexp second_sexp -> Pair(first_sexp,second_sexp)) e last) in  *)
+      let nt = pack nt (
+        function (_,(e,_)) -> match e with
+        |(next_sexp, (_, last_sexp)) -> List.fold_right (
+          fun first_sexp second_sexp -> Pair(first_sexp,second_sexp))next_sexp last_sexp)in
+      nt str 
+    and nt_Nil str =
+      let inside = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in
+      let nt = caten lparen (star inside) in
+      let nt = caten nt rparen in 
+      let nt = pack nt (fun e -> Nil) in nt str
+    and nt_garbage str = 
+      (* let grabage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment;nt_sexp_comment] *)
+      let garbage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in 
+      let garbage nt = make_paired (star garbage) (star garbage) nt in 
+      garbage str;;
+    
+  
+(* --- end of parsers --- *)
+
+
+
+let read_sexpr string =
+  let (sexpr, s) = (nt_sexpr (string_to_list string)) in
+  if (s = [])
+  then sexpr
+  else raise X_no_match;;
+
+
+let read_sexprs string =
+    let (sexpr_list, s) = ((star nt_sexpr) (string_to_list string)) in
+    sexpr_list ;;
+
+
+end;; (* struct Reader *)
+(* test zone *)
+let lparen = (char '(');;
+let rparen = (char ')');;
+let dot = (char '.');;
+let dotted_list  = 
+      let garbage = (pack nt_whitespace (fun e -> Nil)) in 
+      let dot_spaced = caten  garbage (caten dot garbage)  in
+      let inside = caten (nt_boolean) (caten dot_spaced nt_boolean) in
+      let nt = caten lparen (caten inside rparen) in 
+      nt ;;
+
+let dotted_list_sym  = 
+  let garbage = (pack nt_whitespace (fun e -> Nil)) in 
+  let dot_spaced = caten  garbage (caten dot garbage)  in
+  let inside = caten (nt_symbol) (caten dot_spaced nt_symbol) in
+  let nt = caten lparen (caten inside rparen) in 
+  nt ;;
+  
+(* test zone *)
+open Reader;;
