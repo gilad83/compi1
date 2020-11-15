@@ -284,7 +284,8 @@ let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;; *)
   let rec nt_sexpr s = 
     (* let nt_general = disj_list [nt_boolean;nt_char;nt_number;nt_string;nt_symbol; *)
     (* nt_Nil,nt_list;nt_dotted_list;nt_quoted;nt_q_quoted;nt_unquoted;nt_unquoted_spliced] in *)
-    let nt_general = disj_list [nt_boolean;nt_char;nt_string;nt_number;nt_symbol;nt_Nil;nt_list;nt_dotted_list] in
+    let nt_general = disj_list [nt_boolean;nt_char;nt_string;nt_number;nt_symbol;nt_Nil;nt_list;nt_dotted_list;
+    nt_quote] in
     (nt_garbage nt_general ) s
     and nt_list str = 
       let inside = (star nt_sexpr) in 
@@ -303,6 +304,11 @@ let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;; *)
         |(next_sexp, (_, last_sexp)) -> List.fold_right (
           fun first_sexp second_sexp -> Pair(first_sexp,second_sexp))next_sexp last_sexp)in
       nt str 
+    and nt_quote str = 
+      let quote = word_ci "'" in
+      let nt = caten quote nt_sexpr in
+      let nt = pack nt (function (_, e) -> Pair(Symbol("quote"), Pair(e, Nil))) in
+      nt str
     and nt_Nil str =
       let inside = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in
       let nt = caten lparen (star inside) in
