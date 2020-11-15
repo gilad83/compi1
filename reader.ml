@@ -290,8 +290,13 @@ let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;; *)
     (* let nt_general = disj_list [nt_boolean;nt_char;nt_number;nt_string;nt_symbol; *)
     (* nt_Nil,nt_list;nt_dotted_list;nt_quoted;nt_q_quoted;nt_unquoted;nt_unquoted_spliced] in *)
     let nt_general = disj_list [nt_boolean;nt_char;nt_string;nt_number;nt_symbol;nt_Nil;nt_list;nt_dotted_list;
-    nt_quote] in
+    nt_quote;nt_quasi_quote;nt_unquote;nt_unquote_and_splice] in
     (nt_garbage nt_general ) s
+    and nt_Nil str =
+    let inside = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in
+    let nt = caten lparen (star inside) in
+    let nt = caten nt rparen in 
+    let nt = pack nt (fun e -> Nil) in nt str
     and nt_list str = 
       let inside = (star nt_sexpr) in 
       let nt = caten lparen inside in
@@ -300,7 +305,7 @@ let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;; *)
         List.fold_right (fun first_sexp second_sexp -> Pair(first_sexp,second_sexp)) e Nil) in 
       nt str
     and nt_dotted_list str = 
-      let garbage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in 
+      let garbage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment;nt_sexpr_comment] in 
       let dot_spaced = make_paired (star garbage) (plus garbage) dot  in
       let inside = caten (plus nt_sexpr) (caten dot_spaced nt_sexpr) in
       let nt = caten lparen (caten inside rparen) in 
@@ -314,14 +319,30 @@ let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;; *)
       let nt = caten quote nt_sexpr in
       let nt = pack nt (function (_, e) -> Pair(Symbol("quote"), Pair(e, Nil))) in
       nt str
-    and nt_Nil str =
-      let inside = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in
-      let nt = caten lparen (star inside) in
-      let nt = caten nt rparen in 
-      let nt = pack nt (fun e -> Nil) in nt str
+    and nt_quasi_quote str = 
+      let quote = word_ci "`" in
+      let nt = caten quote nt_sexpr in
+      let nt = pack nt (function (_, e) -> Pair(Symbol("quasiquote"), Pair(e, Nil))) in
+      nt str
+    and nt_unquote str = 
+      let quote = word_ci "," in
+      let nt = caten quote nt_sexpr in
+      let nt = pack nt (function (_, e) -> Pair(Symbol("unquote"), Pair(e, Nil))) in
+      nt str
+    and nt_unquote_and_splice str = 
+      let quote = word_ci ",@" in
+      let nt = caten quote nt_sexpr in
+      let nt = pack nt (function (_, e) -> Pair(Symbol("unquote-splicing"), Pair(e, Nil))) in
+      nt str
+    and nt_sexpr_comment str =
+      let prefix = word "#;" in
+      let inside = nt_sexpr in
+      let nt = caten prefix inside in
+      let nt = pack nt (fun e -> Nil) in
+      nt str
     and nt_garbage str = 
       (* let grabage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment;nt_sexp_comment] *)
-      let garbage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in 
+      let garbage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment;nt_sexpr_comment] in 
       let garbage nt = make_paired (star garbage) (star garbage) nt in 
       garbage str;;
     
