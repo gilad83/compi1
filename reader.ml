@@ -49,6 +49,11 @@ module Reader: sig
   val nt_symbol : char list -> sexpr * char list
   val nt_number : char list -> sexpr * char list
   val nt_string : char list -> sexpr * char list
+  (*DELETE BELOW*)
+  val nt_sexpr : char list -> sexpr * char list 
+  val nt_char : char list -> sexpr * char list
+  val nt_Nil : char list -> sexpr * char list
+  val nt_list : char list -> sexpr * char list
 end
 = struct
 
