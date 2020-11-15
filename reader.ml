@@ -54,6 +54,7 @@ module Reader: sig
   val nt_char : char list -> sexpr * char list
   val nt_Nil : char list -> sexpr * char list
   val nt_list : char list -> sexpr * char list
+  val nt_char : char list -> sexpr * char list
 end
 = struct
 
@@ -183,7 +184,7 @@ let nt_float s =
   with X_no_match -> (Number(Float(float(sign)*.(float_of_string (list_to_string num)))), rest);;
 
   
-let nt_number = disj nt_float (disj nt_fraction nt_integer);;
+let nt_number = not_followed_by (disj nt_float (disj nt_fraction nt_integer)) nt_symbol;;
 
 
 
@@ -298,12 +299,10 @@ let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;; *)
         List.fold_right (fun first_sexp second_sexp -> Pair(first_sexp,second_sexp)) e Nil) in 
       nt str
     and nt_dotted_list str = 
-      let garbage = (pack nt_whitespace (fun e -> Nil)) in 
-      let dot_spaced = caten garbage (caten dot garbage)  in
+      let garbage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in 
+      let dot_spaced = make_paired (star garbage) (plus garbage) dot  in
       let inside = caten (plus nt_sexpr) (caten dot_spaced nt_sexpr) in
       let nt = caten lparen (caten inside rparen) in 
-      (* let nt = pack nt (fun (_,(e,(_,(last,_))))  -> 
-      List.fold_right (fun first_sexp second_sexp -> Pair(first_sexp,second_sexp)) e last) in  *)
       let nt = pack nt (
         function (_,(e,_)) -> match e with
         |(next_sexp, (_, last_sexp)) -> List.fold_right (
@@ -340,21 +339,5 @@ let read_sexprs string =
 end;; (* struct Reader *)
 open Reader;;
 (* test zone *)
-let lparen = (char '(');;
-let rparen = (char ')');;
-let dot = (char '.');;
-(* let dotted_list  = 
-      let garbage = (pack nt_whitespace (fun e -> Nil)) in 
-      let dot_spaced = caten  garbage (caten dot garbage)  in
-      let inside = caten (nt_boolean) (caten dot_spaced nt_boolean) in
-      let nt = caten lparen (caten inside rparen) in 
-      nt ;; *)
 
-let dotted_list_sym  = 
-  let garbage = (pack nt_whitespace (fun e -> Nil)) in 
-  let dot_spaced = caten  garbage (caten dot garbage)  in
-  let inside = caten (nt_symbol) (caten dot_spaced nt_symbol) in
-  let nt = caten lparen (caten inside rparen) in 
-  nt ;;
-  
 (* test zone *)
