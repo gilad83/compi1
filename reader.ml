@@ -84,13 +84,6 @@ let nt_line_comment =
   let nt = pack nt (fun e -> Nil) in
   nt;;
 
-let nt_boolean  = 
-  let bool_tok =  disj ( word_ci "#f")  (word_ci "#t")  in
-   pack bool_tok (fun (bool_t) -> Bool (bool_of_string (bool_t)));;
-  (* let nt = not_followed_by ( bool_tok nt_symbol) in nt ;; *)
-
-
-
  let nt_symbol = 
   let nt_letters = disj (range 'A' 'Z')  (range 'a' 'z') in
   let upper_to_lower_case = pack nt_letters lowercase_ascii in
@@ -102,7 +95,10 @@ let nt_boolean  =
   let nt = pack nt (fun (c,e) -> let string_of_e = list_to_string e in
   let string_of_e = String.make 1 c ^ string_of_e in Symbol(string_of_e)) in 
   nt;;
- 
+
+let nt_boolean  = 
+  let bool_tok =  not_followed_by (disj ( word_ci "#f")  (word_ci "#t")) nt_symbol  in
+  pack bool_tok (fun (bool_t) -> Bool (bool_of_string (bool_t)));;
 
 (* moved inside  *)
 (************* number parsers *************)
