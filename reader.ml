@@ -31,30 +31,7 @@ let rec sexpr_eq s1 s2 =
   | _ -> false;;
 
 module Reader: sig
-  val read_sexpr : string -> sexpr
   val read_sexprs : string -> sexpr list
-  (* Atomic Parsers *)
-  val comma : char list -> char * char list
-  val colon : char list -> char * char list
-  val dot : char list -> char * char list
-  val nt_no_new_line : char list -> char * char list
-  val semi_colon : char list -> char * char list
-  (*Stared Atomic Parsers *)
-  val nt_star_whitespaces : char list -> char list * char list
-  (* complex Parsers *)
-  val make_paired : ('a -> 'b * 'c) -> ('d -> 'e * 'f) -> ('c -> 'g * 'd) -> 'a -> 'g * 'f 
-  val make_spaced : (char list -> 'a * char list) -> char list -> 'a * char list
-  val nt_line_comment : char list -> sexpr * char list
-  val nt_boolean : char list -> sexpr * char list
-  val nt_symbol : char list -> sexpr * char list
-  val nt_number : char list -> sexpr * char list
-  val nt_string : char list -> sexpr * char list
-  (*DELETE BELOW*)
-  val nt_sexpr : char list -> sexpr * char list 
-  val nt_char : char list -> sexpr * char list
-  val nt_Nil : char list -> sexpr * char list
-  val nt_list : char list -> sexpr * char list
-  val nt_char : char list -> sexpr * char list
 end
 = struct
 
@@ -109,7 +86,8 @@ let nt_line_comment =
 
 let nt_boolean  = 
   let bool_tok =  disj ( word_ci "#f")  (word_ci "#t")  in
-  pack bool_tok (fun (bool_t) -> Bool (bool_of_string (bool_t)));;  
+   pack bool_tok (fun (bool_t) -> Bool (bool_of_string (bool_t)));;
+  (* let nt = not_followed_by ( bool_tok nt_symbol) in nt ;; *)
 
 
 
@@ -232,9 +210,6 @@ let nt_string =
 
 (****************** End of string parser ******************)
 
-
-
-
 (***************** Char parser ******************)
 let vis_char = const (fun c -> (int_of_char c) > 32);;
 let hashtag = (char '#');;
@@ -258,37 +233,14 @@ let nt_char =
 
 let lparen = (char '(');;
 let rparen = (char ')');;
-(* let inside = disj_list [nt_line_comment;pack nt_whitespace (fun e -> Nil)];; *)
 
 
 (*****************End of Nil parser ******************)
 
 
 
-(***************** Sexp bug ******************)
-
-  
-
-
-
-
-
-(*****************  end of Sexp  ******************)
-
-(****************** Quote parser ******************)
-(* let nt_quoted = caten (const (fun ch -> ch = ''')) nt_sexpr;;
-
-let nt_quasiQuoted = caten (const (fun ch -> ch = '`')) nt_sexpr;;
-
-let nt_unquoted = caten (const (fun ch -> ch = ',')) nt_sexpr;;
-
-let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;; *)
-(****************** End of Quote parser ******************)
-(* (moved inside) *)
-
+(***************** Sexp  ******************)
   let rec nt_sexpr s = 
-    (* let nt_general = disj_list [nt_boolean;nt_char;nt_number;nt_string;nt_symbol; *)
-    (* nt_Nil,nt_list;nt_dotted_list;nt_quoted;nt_q_quoted;nt_unquoted;nt_unquoted_spliced] in *)
     let nt_general = disj_list [nt_boolean;nt_char;nt_string;nt_number;nt_symbol;nt_Nil;nt_list;nt_dotted_list;
     nt_quote;nt_quasi_quote;nt_unquote;nt_unquote_and_splice] in
     (nt_garbage nt_general ) s
@@ -345,22 +297,13 @@ let nt_unquotedAndSpliced = caten (word_ci ",@") nt_sexpr;; *)
       let garbage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment;nt_sexpr_comment] in 
       let garbage nt = make_paired (star garbage) (star garbage) nt in 
       garbage str;;
-    
-  
+(*****************  end of Sexp  ******************)
 (* --- end of parsers --- *)
 
 
-
-let read_sexpr string =
-  let (sexpr, s) = (nt_sexpr (string_to_list string)) in
-  if (s = [])
-  then sexpr
-  else raise X_no_match;;
-
-
 let read_sexprs string =
-    let (sexpr_list, s) = ((star nt_sexpr) (string_to_list string)) in
-    sexpr_list ;;
+    let (list_of_sexp, rest) = ((star nt_sexpr) (string_to_list string)) in
+    list_of_sexp ;;
 
 
 end;; (* struct Reader *)
