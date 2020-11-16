@@ -1,6 +1,5 @@
 #use "pc.ml";;
 open PC;;
-(* #use "helperFunctions.ml";; *)
 
 exception X_not_yet_implemented;;
 exception X_this_should_not_happen;;
@@ -88,10 +87,13 @@ let nt_line_comment =
   let nt_letters = disj (range 'A' 'Z')  (range 'a' 'z') in
   let upper_to_lower_case = pack nt_letters lowercase_ascii in
   let punct = disj_list [char '?';char '/';char '<';char '>';char '+';char '=' ;char '_' ;
-    char '-';char '*';char '^';char '$';char '!';] in
+    char '-';char '*';char '^';char '$';char '!';char ':';] in
   let digitG = range '0' '9' in
-  let nt = disj_list[digitG;upper_to_lower_case;punct] in
-  let nt = caten nt (star (disj_list [dot;nt]))in
+  let nt_no_dot = disj_list[digitG;upper_to_lower_case;punct] in
+  let nt_with_dot = disj_list [dot;nt_no_dot] in 
+  let nt_no_dot_start = caten nt_no_dot (star nt_with_dot) in
+  let nt_dot_start = caten nt_with_dot (plus nt_with_dot) in
+  let nt = disj_list [nt_no_dot_start;nt_dot_start] in
   let nt = pack nt (fun (c,e) -> let string_of_e = list_to_string e in
   let string_of_e = String.make 1 c ^ string_of_e in Symbol(string_of_e)) in 
   nt;;
