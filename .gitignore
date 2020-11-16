@@ -29,3 +29,4 @@ setup.log
 _opam/
 .vscode/launch.json
 .vscode
+tests
