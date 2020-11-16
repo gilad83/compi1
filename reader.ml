@@ -245,7 +245,7 @@ let rparen = (char ')');;
     nt_quote;nt_quasi_quote;nt_unquote;nt_unquote_and_splice] in
     (nt_garbage nt_general ) s
     and nt_Nil str =
-    let inside = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment] in
+    let inside = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment;nt_sexpr_comment] in
     let nt = caten lparen (star inside) in
     let nt = caten nt rparen in 
     let nt = pack nt (fun e -> Nil) in nt str
@@ -253,7 +253,8 @@ let rparen = (char ')');;
       let inside = (star nt_sexpr) in 
       let nt = caten lparen inside in
       let nt = caten nt rparen in 
-      let nt = pack nt (fun ((_,e),_)  ->
+      let nt = pack nt 
+      (fun ((_,e),_)  ->
         List.fold_right (fun first_sexp second_sexp -> Pair(first_sexp,second_sexp)) e Nil) in 
       nt str
     and nt_dotted_list str = 
