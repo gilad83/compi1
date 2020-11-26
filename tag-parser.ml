@@ -61,22 +61,27 @@ let reserved_word_list =
 
 (* work on the tag parser starts here *)
 
-let tag_parse_expressions sexpr = 
-  let parse single_sexpr= 
-    match single_sexpr with 
-    | Bool(single_sexpr) -> Const(Sexpr(Bool(single_sexpr)))
-    | Nil -> Const(Sexpr(Nil))
-    | Number(single_sexpr) -> Const(Sexpr(Number(single_sexpr)))
-    | Char(single_sexpr) -> Const(Sexpr(Char(single_sexpr)))
-    | String(single_sexpr) -> Const(Sexpr(String(single_sexpr)))
-    | Symbol(single_sexpr) -> raise X_not_yet_implemented
-    | Pair(single_sexpr, _) -> raise X_not_yet_implemented
-  in List.map parse sexpr;;
+(* Tag Parsers *)
+let tag_parse_variable x =
+  if (ormap (fun a -> x = a) reserved_word_list)
+  then raise X_no_match 
+  else Var(x);;
 
+(*question - in what case a constant is Void?*)
+
+let tag_parse_expressions sexpr = 
+  let parse x= 
+    match x with 
+    | Bool(x) -> Const(Sexpr(Bool(x)))
+    | Nil -> Const(Sexpr(Nil))
+    | Number(x) -> Const(Sexpr(Number(x)))
+    | Char(x) -> Const(Sexpr(Char(x)))
+    | String(x) -> Const(Sexpr(String(x)))
+    | Symbol(x) -> (tag_parse_variable x)
+    | Pair(Symbol("quote"), Pair(x, Nil)) -> Const(Sexpr(x))
+  in List.map parse sexpr;;
   
 end;; (* struct Tag_Parser *)
-
-
 
 (*Function for testing*)
 let test_tag_parse tag_parser str =
