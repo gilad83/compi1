@@ -1,5 +1,8 @@
 #use "reader.ml";;
 
+open PC
+open Reader
+
 type constant =
   | Sexpr of sexpr
   | Void
@@ -58,8 +61,24 @@ let reserved_word_list =
 
 (* work on the tag parser starts here *)
 
-let tag_parse_expressions sexpr = raise X_not_yet_implemented;;
+let tag_parse_expressions sexpr = 
+  let parse single_sexpr= 
+    match single_sexpr with 
+    | Bool(single_sexpr) -> Const(Sexpr(Bool(single_sexpr)))
+    | Nil -> Const(Sexpr(Nil))
+    | Number(single_sexpr) -> Const(Sexpr(Number(single_sexpr)))
+    | Char(single_sexpr) -> Const(Sexpr(Char(single_sexpr)))
+    | String(single_sexpr) -> Const(Sexpr(String(single_sexpr)))
+    | Symbol(single_sexpr) -> raise X_not_yet_implemented
+    | Pair(single_sexpr, _) -> raise X_not_yet_implemented
+  in List.map parse sexpr;;
 
   
 end;; (* struct Tag_Parser *)
 
+
+
+(*Function for testing*)
+let test_tag_parse tag_parser str =
+  tag_parser (read_sexprs str);;
+open Tag_Parser;;
