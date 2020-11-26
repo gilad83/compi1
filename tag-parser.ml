@@ -67,10 +67,8 @@ let tag_parse_variable x =
   then raise X_no_match 
   else Var(x);;
 
-(*question - in what case a constant is Void?*)
-
 let tag_parse_expressions sexpr = 
-  let parse x= 
+  let rec tag_parse x = 
     match x with 
     | Bool(x) -> Const(Sexpr(Bool(x)))
     | Nil -> Const(Sexpr(Nil))
@@ -79,7 +77,9 @@ let tag_parse_expressions sexpr =
     | String(x) -> Const(Sexpr(String(x)))
     | Symbol(x) -> (tag_parse_variable x)
     | Pair(Symbol("quote"), Pair(x, Nil)) -> Const(Sexpr(x))
-  in List.map parse sexpr;;
+    | Pair(Symbol("if"), Pair(test, Pair(dit, Pair(dif, Nil)))) ->
+        If(tag_parse test, tag_parse dit, tag_parse dif)
+  in List.map tag_parse sexpr;;
   
 end;; (* struct Tag_Parser *)
 
