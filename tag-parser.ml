@@ -61,29 +61,38 @@ let reserved_word_list =
 
 (* work on the tag parser starts here *)
 
-(* Tag Parsers *)
-let tag_parse_variable x =
+(**************** Tag Parsers ****************)
+
+let rec tag_parse x = 
+  match x with 
+  | Bool(x) -> Const(Sexpr(Bool(x)))
+  | Nil -> Const(Sexpr(Nil))
+  | Number(x) -> Const(Sexpr(Number(x)))
+  | Char(x) -> Const(Sexpr(Char(x)))
+  | String(x) -> Const(Sexpr(String(x)))
+  | Symbol(x) -> (tag_parse_variable x)
+  | Pair(Symbol("quote"), Pair(x, Nil)) -> Const(Sexpr(x))
+  | Pair(Symbol("if"), Pair(test, Pair(dit, Pair(dif, Nil)))) ->
+      If(tag_parse test, tag_parse dit, tag_parse dif)
+  | Pair(Symbol("begin"), x) -> tag_parse_explicitSeq x
+
+and tag_parse_variable x =
   if (ormap (fun a -> x = a) reserved_word_list)
   then raise X_no_match 
-  else Var(x);;
+  else Var(x)
+
+and tag_parse_explicitSeq x = 
+  match x with
+  | Nil -> Const(Void)
+  | Pair(head, Nil) -> tag_parse head
+  | Pair(head, tail) -> Seq([tag_parse head] @ [(tag_parse Pair(Symbol("begin"),tail))]);;
 
 let tag_parse_expressions sexpr = 
-  let rec tag_parse x = 
-    match x with 
-    | Bool(x) -> Const(Sexpr(Bool(x)))
-    | Nil -> Const(Sexpr(Nil))
-    | Number(x) -> Const(Sexpr(Number(x)))
-    | Char(x) -> Const(Sexpr(Char(x)))
-    | String(x) -> Const(Sexpr(String(x)))
-    | Symbol(x) -> (tag_parse_variable x)
-    | Pair(Symbol("quote"), Pair(x, Nil)) -> Const(Sexpr(x))
-    | Pair(Symbol("if"), Pair(test, Pair(dit, Pair(dif, Nil)))) ->
-        If(tag_parse test, tag_parse dit, tag_parse dif)
-  in List.map tag_parse sexpr;;
-  
+  List.map tag_parse sexpr;;
+
 end;; (* struct Tag_Parser *)
 
 (*Function for testing*)
-let test_tag_parse tag_parser str =
-  tag_parser (read_sexprs str);;
 open Tag_Parser;;
+let test_tag_parse str =
+  tag_parse_expressions (read_sexprs str);;
