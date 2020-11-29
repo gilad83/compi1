@@ -84,9 +84,10 @@ and tag_parse_variable x =
 and tag_parse_explicitSeq x = 
   match x with
   | Nil -> Const(Void)
-  | Pair(Pair(Symbol("begin"), tail), tail2) -> tag_parse_explicitSeq tail
   | Pair(head, Nil) -> tag_parse head
-  | Pair(head, tail) -> Seq(create_sequence x)
+  | Pair(head, tail) -> Seq(List.flatten (List.map (fun expr -> match expr with 
+                                                                | Seq(arr) -> arr
+                                                                | _ -> [expr]) (create_sequence x)))
 
 and create_sequence x = 
   match x with
