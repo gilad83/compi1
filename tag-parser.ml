@@ -43,8 +43,8 @@ let rec expr_eq e1 e2 =
      (expr_eq e1 e2) &&
        (List.for_all2 expr_eq args1 args2)
   | _ -> false;;
-	
-                       
+
+
 exception X_syntax_error;;
 
 module type TAG_PARSER = sig
@@ -57,14 +57,14 @@ let reserved_word_list =
   ["and"; "begin"; "cond"; "define"; "else";
    "if"; "lambda"; "let"; "let*"; "letrec"; "or";
    "quasiquote"; "quote"; "set!"; "pset!"; "unquote";
-   "unquote-splicing"];;  
+   "unquote-splicing"];;
 
 (* work on the tag parser starts here *)
 
 (**************** Tag Parsers ****************)
 
-let rec tag_parse x = 
-  match x with 
+let rec tag_parse x =
+  match x with
   | Bool(x) -> Const(Sexpr(Bool(x)))
   | Nil -> Const(Sexpr(Nil))
   | Number(x) -> Const(Sexpr(Number(x)))
@@ -78,16 +78,16 @@ let rec tag_parse x =
 
 and tag_parse_variable x =
   if (ormap (fun a -> x = a) reserved_word_list)
-  then raise X_no_match 
+  then raise X_no_match
   else Var(x)
 
-and tag_parse_explicitSeq x = 
+and tag_parse_explicitSeq x =
   match x with
   | Nil -> Const(Void)
   | Pair(head, Nil) -> tag_parse head
-  | Pair(head, tail) -> Seq([tag_parse head] @ [(tag_parse Pair(Symbol("begin"),tail))]);;
+  | Pair(head, tail) -> Seq([tag_parse head] @ [(tag_parse (Pair(Symbol("begin"),tail)))]);;
 
-let tag_parse_expressions sexpr = 
+let tag_parse_expressions sexpr =
   List.map tag_parse sexpr;;
 
 end;; (* struct Tag_Parser *)
