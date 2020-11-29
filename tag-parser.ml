@@ -74,7 +74,7 @@ let rec tag_parse x =
   | Pair(Symbol("quote"), Pair(x, Nil)) -> Const(Sexpr(x))
   | Pair(Symbol("if"), Pair(test, Pair(dit, Pair(dif, Nil)))) ->
       If(tag_parse test, tag_parse dit, tag_parse dif)
-  | Pair(Symbol("begin"), x) -> tag_parse_explicitSeq x
+  | Pair(Symbol("begin"), tail) -> tag_parse_explicitSeq tail
 
 and tag_parse_variable x =
   if (ormap (fun a -> x = a) reserved_word_list)
@@ -84,8 +84,16 @@ and tag_parse_variable x =
 and tag_parse_explicitSeq x = 
   match x with
   | Nil -> Const(Void)
+  | Pair(Pair(Symbol("begin"), tail), tail2) -> tag_parse_explicitSeq tail
   | Pair(head, Nil) -> tag_parse head
-  | Pair(head, tail) -> Seq([tag_parse head] @ [(tag_parse Pair(Symbol("begin"),tail))]);;
+  | Pair(head, tail) -> Seq(create_sequence x)
+
+and create_sequence x = 
+  match x with
+  | Pair(head, Nil) -> [tag_parse head]
+  | Pair(head, tail) -> [tag_parse head] @ create_sequence tail;;
+
+
 
 let tag_parse_expressions sexpr = 
   List.map tag_parse sexpr;;
