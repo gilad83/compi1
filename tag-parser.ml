@@ -72,8 +72,12 @@ let rec tag_parse x =
   | String(x) -> Const(Sexpr(String(x)))
   | Symbol(x) -> (tag_parse_variable x)
   | Pair(Symbol("quote"), Pair(x, Nil)) -> Const(Sexpr(x))
+  (*if than else*)
   | Pair(Symbol("if"), Pair(test, Pair(dit, Pair(dif, Nil)))) ->
       If(tag_parse test, tag_parse dit, tag_parse dif)
+   (*if than*)
+  | Pair(Symbol("if"), Pair(test, Pair(dit, Nil))) ->
+      If(tag_parse test, tag_parse dit, Const(Void))
   | Pair(Symbol("begin"), tail) -> tag_parse_explicitSeq tail
   | Pair(Symbol("set!"),Pair(var,Pair(e,Nil))) -> Set(tag_parse var, tag_parse e)
   | Pair(Symbol("define"),Pair(var,Pair(e,Nil))) -> Def(tag_parse var, tag_parse e)
