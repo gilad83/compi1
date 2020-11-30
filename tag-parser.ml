@@ -43,8 +43,8 @@ let rec expr_eq e1 e2 =
      (expr_eq e1 e2) &&
        (List.for_all2 expr_eq args1 args2)
   | _ -> false;;
-	
-                       
+
+
 exception X_syntax_error;;
 
 module type TAG_PARSER = sig
@@ -57,7 +57,7 @@ let reserved_word_list =
   ["and"; "begin"; "cond"; "define"; "else";
    "if"; "lambda"; "let"; "let*"; "letrec"; "or";
    "quasiquote"; "quote"; "set!"; "pset!"; "unquote";
-   "unquote-splicing"];;  
+   "unquote-splicing"];;
 
 (* work on the tag parser starts here *)
 
@@ -88,8 +88,8 @@ let rec proper_to_string_list lst =
 
 (**************** Tag Parsers ****************)
 
-let rec tag_parse x = 
-  match x with 
+let rec tag_parse x =
+  match x with
   | Bool(x) -> Const(Sexpr(Bool(x)))
   | Nil -> Const(Sexpr(Nil))
   | Number(x) -> Const(Sexpr(Number(x)))
@@ -100,22 +100,24 @@ let rec tag_parse x =
   | Pair(Symbol("if"), Pair(test, Pair(dit, Pair(dif, Nil)))) ->
       If(tag_parse test, tag_parse dit, tag_parse dif)
   | Pair(Symbol("begin"), tail) -> tag_parse_explicitSeq tail
+  | Pair(Symbol("set!"),Pair(var,Pair(e,Nil))) -> Set(tag_parse var, tag_parse e)
+  | Pair(Symbol("define"),Pair(var,Pair(e,Nil))) -> Def(tag_parse var, tag_parse e)
   | Pair(Symbol("lambda"), tail) -> tag_parse_lambda tail
 
 and tag_parse_variable x =
   if (ormap (fun a -> x = a) reserved_word_list)
-  then raise X_no_match 
+  then raise X_no_match
   else Var(x)
 
-and tag_parse_explicitSeq x = 
+and tag_parse_explicitSeq x =
   match x with
   | Nil -> Const(Void)
   | Pair(head, Nil) -> tag_parse head
-  | Pair(head, tail) -> Seq(List.flatten (List.map (fun expr -> match expr with 
+  | Pair(head, tail) -> Seq(List.flatten (List.map (fun expr -> match expr with
                                                                 | Seq(arr) -> arr
                                                                 | _ -> [expr]) (create_sequence x)))
 
-and create_sequence x = 
+and create_sequence x =
   match x with
   | Pair(head, Nil) -> [tag_parse head]
   | Pair(head, tail) -> [tag_parse head] @ create_sequence tail
@@ -130,7 +132,7 @@ and tag_parse_lambda x =
       | _ -> LambdaOpt(proper_to_string_list (improper_to_proper_list args), improper_list_last_elem args, tag_parse_explicitSeq body);;(* improper list *)
 
 
-let tag_parse_expressions sexpr = 
+let tag_parse_expressions sexpr =
   List.map tag_parse sexpr;;
 
 end;; (* struct Tag_Parser *)
