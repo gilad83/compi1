@@ -103,6 +103,7 @@ let rec tag_parse x =
   | Pair(Symbol("set!"),Pair(var,Pair(e,Nil))) -> Set(tag_parse var, tag_parse e)
   | Pair(Symbol("define"),Pair(var,Pair(e,Nil))) -> Def(tag_parse var, tag_parse e)
   | Pair(Symbol("lambda"), tail) -> tag_parse_lambda tail
+  | Pair(Symbol("or"), sexprs) -> tag_parse_or sexprs
 
 and tag_parse_variable x =
   if (ormap (fun a -> x = a) reserved_word_list)
@@ -129,9 +130,19 @@ and tag_parse_lambda x =
       then LambdaSimple((proper_to_string_list args),(tag_parse_explicitSeq body)) 
       else match args with
       | Symbol(vs) -> LambdaOpt([], vs, tag_parse_explicitSeq body)
-      | _ -> LambdaOpt(proper_to_string_list (improper_to_proper_list args), improper_list_last_elem args, tag_parse_explicitSeq body);;(* improper list *)
+      | _ -> LambdaOpt(proper_to_string_list (improper_to_proper_list args), improper_list_last_elem args, tag_parse_explicitSeq body)(* improper list *)
 
+and tag_parse_or x = 
+  match x with
+  | Nil -> Const(Sexpr(Bool(false)))
+  | Pair(e, Nil) -> tag_parse e
+  | Pair(e, es) -> Or([tag_parse e] @ or_args es)
 
+and or_args x =
+  match x with
+  | Pair(e, Nil) -> [tag_parse e]
+  | Pair(e, es) -> [tag_parse e] @ or_args es
+;;
 let tag_parse_expressions sexpr =
   List.map tag_parse sexpr;;
 
