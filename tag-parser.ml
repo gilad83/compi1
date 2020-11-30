@@ -135,7 +135,7 @@ and tag_parse_lambda x =
 and tag_parse_or x = 
   match x with
   | Nil -> Const(Sexpr(Bool(false)))
-  | Pair(e, Nil) -> tag_parse e
+  | Pair(e, Nil) -> Or([tag_parse e])
   | Pair(e, es) -> Or([tag_parse e] @ or_args es)
 
 and or_args x =
