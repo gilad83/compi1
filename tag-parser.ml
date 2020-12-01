@@ -81,10 +81,30 @@ let sexpr_to_string x =
   match x with
   | Symbol(x) -> x;;
 
-let rec proper_to_string_list lst = 
+let rec is_contains a lst =
   match lst with
-  | Pair(head, tail) -> [sexpr_to_string head] @ proper_to_string_list tail
-  | Nil -> [];;
+  | [] -> false
+  | head :: tail -> a = head || is_contains a tail;;
+
+let rec is_unique_list lst = 
+  match lst with
+  | [] -> true
+  | head :: tail -> not (is_contains head tail) && is_unique_list tail;;
+
+let is_reserved_word word = 
+  (ormap (fun a -> word = a) reserved_word_list);;
+
+let is_contains_reserved_word lst =
+  ormap (fun a -> a) (List.map is_reserved_word lst);;
+
+let rec to_list x = 
+  match x with
+  | Nil -> []
+  | Pair(e, Nil) -> [sexpr_to_string e]
+  | Pair(e, Pair(d, ds)) -> [sexpr_to_string e] @ to_list (Pair(d, ds))
+  | Pair(e, es) -> [sexpr_to_string e ; sexpr_to_string es]
+  | _ -> [];;
+
 
 (**************** Tag Parsers ****************)
 
@@ -106,7 +126,7 @@ let rec tag_parse x =
   | Pair(Symbol("or"), sexprs) -> tag_parse_or sexprs
 
 and tag_parse_variable x =
-  if (ormap (fun a -> x = a) reserved_word_list)
+  if (is_reserved_word x)
   then raise X_no_match
   else Var(x)
 
@@ -126,11 +146,17 @@ and create_sequence x =
 and tag_parse_lambda x =
   match x with
   | Pair(args, body) when body <> Nil -> (* assuming body != Nil - no empty implicit sequence allowed*)
-      if (is_proper_list args)
-      then LambdaSimple((proper_to_string_list args),(tag_parse_explicitSeq body)) 
-      else match args with
-      | Symbol(vs) -> LambdaOpt([], vs, tag_parse_explicitSeq body)
-      | _ -> LambdaOpt(proper_to_string_list (improper_to_proper_list args), improper_list_last_elem args, tag_parse_explicitSeq body)(* improper list *)
+    match args with
+    | Symbol(vs) -> if is_reserved_word vs
+                    then raise X_syntax_error
+                    else LambdaOpt([], vs, tag_parse_explicitSeq body)
+    | _ ->
+      if (is_unique_list (to_list args)) && not (is_contains_reserved_word (to_list args))
+      then if (is_proper_list args)
+          then LambdaSimple((to_list args),(tag_parse_explicitSeq body)) 
+          else LambdaOpt(to_list (improper_to_proper_list args), improper_list_last_elem args, tag_parse_explicitSeq body)
+      else raise X_syntax_error
+  | _ -> raise X_syntax_error
 
 and tag_parse_or x = 
   match x with
