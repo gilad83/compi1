@@ -61,13 +61,13 @@ let reserved_word_list =
 
 (* work on the tag parser starts here *)
 
-let rec is_proper_list lst = 
+let rec is_proper_list lst =
   match lst with
   | Pair(head, tail) -> is_proper_list tail
   | Nil -> true
   | _ -> false;;
 
-let rec improper_list_last_elem lst = 
+let rec improper_list_last_elem lst =
   match lst with
   | Pair(head, tail) -> improper_list_last_elem tail
   | Symbol(last) -> last;;
@@ -77,11 +77,11 @@ let rec improper_to_proper_list lst =
   | Pair(head, tail) -> Pair(head, improper_to_proper_list tail)
   | Symbol(last) -> Nil;;
 
-let sexpr_to_string x = 
+let sexpr_to_string x =
   match x with
   | Symbol(x) -> x;;
 
-let rec proper_to_string_list lst = 
+let rec proper_to_string_list lst =
   match lst with
   | Pair(head, tail) -> [sexpr_to_string head] @ proper_to_string_list tail
   | Nil -> [];;
@@ -108,6 +108,13 @@ let rec tag_parse x =
   | Pair(Symbol("define"),Pair(var,Pair(e,Nil))) -> Def(tag_parse var, tag_parse e)
   | Pair(Symbol("lambda"), tail) -> tag_parse_lambda tail
   | Pair(Symbol("or"), sexprs) -> tag_parse_or sexprs
+  | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
+
+and tag_parse_applic x =
+  match x with
+  | Nil -> [Const(Sexpr(Nil))]
+  | Pair(head, Nil) -> [tag_parse head]
+  | Pair(head,tail) ->  [tag_parse head] @ tag_parse_applic tail
 
 and tag_parse_variable x =
   if (ormap (fun a -> x = a) reserved_word_list)
@@ -131,12 +138,12 @@ and tag_parse_lambda x =
   match x with
   | Pair(args, body) when body <> Nil -> (* assuming body != Nil - no empty implicit sequence allowed*)
       if (is_proper_list args)
-      then LambdaSimple((proper_to_string_list args),(tag_parse_explicitSeq body)) 
+      then LambdaSimple((proper_to_string_list args),(tag_parse_explicitSeq body))
       else match args with
       | Symbol(vs) -> LambdaOpt([], vs, tag_parse_explicitSeq body)
       | _ -> LambdaOpt(proper_to_string_list (improper_to_proper_list args), improper_list_last_elem args, tag_parse_explicitSeq body)(* improper list *)
 
-and tag_parse_or x = 
+and tag_parse_or x =
   match x with
   | Nil -> Const(Sexpr(Bool(false)))
   | Pair(e, Nil) -> Or([tag_parse e])
