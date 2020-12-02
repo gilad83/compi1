@@ -140,14 +140,18 @@ let rec tag_parse x =
   | Pair(Symbol("lambda"), tail) -> tag_parse_lambda tail
   | Pair(Symbol("or"), sexprs) -> tag_parse_or sexprs
   | Pair(Symbol("and"), sexprs) -> tag_parse_and sexprs
-    (* applic *)
-  | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
-  (*Macro_expansions*)
   (* cond *)
   | Pair(Symbol("cond"), listSexp) -> tag_parse_cond listSexp
+  (* applic *)
+  | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
+  (*Macro_expansions*)
+
 
 and tag_parse_cond x =
- raise X_not_yet_implemented
+ match x with
+(* (common form) *)
+Pair (head,tail) -> If(tag_parse head,tag_parse tail,tag_parse Nil)
+|_ -> raise X_syntax_error
 
 and tag_parse_applic x =
   match x with
