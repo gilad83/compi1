@@ -108,7 +108,14 @@ let rec tag_parse x =
   | Pair(Symbol("define"),Pair(var,Pair(e,Nil))) -> Def(tag_parse var, tag_parse e)
   | Pair(Symbol("lambda"), tail) -> tag_parse_lambda tail
   | Pair(Symbol("or"), sexprs) -> tag_parse_or sexprs
+  (* applic *)
   | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
+  (*Macro_expansions*)
+  (* cond *)
+  | Pair(Symbol("cond"), listSexp) -> tag_parse_cond listSexp
+
+and tag_parse_cond x =
+ raise X_not_yet_implemented
 
 and tag_parse_applic x =
   match x with
