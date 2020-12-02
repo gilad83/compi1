@@ -70,21 +70,52 @@ let rec is_proper_list lst =
 let rec improper_list_last_elem lst =
   match lst with
   | Pair(head, tail) -> improper_list_last_elem tail
-  | Symbol(last) -> last;;
+  | Symbol(last) -> last
+  | _ -> raise X_syntax_error;;
 
 let rec improper_to_proper_list lst =
   match lst with
   | Pair(head, tail) -> Pair(head, improper_to_proper_list tail)
-  | Symbol(last) -> Nil;;
+  | Symbol(last) -> Nil
+  | _ -> raise X_syntax_error;;
 
 let sexpr_to_string x =
   match x with
-  | Symbol(x) -> x;;
+  | Symbol(x) -> x
+  | _ -> raise X_syntax_error;;
 
-let rec proper_to_string_list lst =
+let rec is_contains a lst =
   match lst with
-  | Pair(head, tail) -> [sexpr_to_string head] @ proper_to_string_list tail
-  | Nil -> [];;
+  | [] -> false
+  | head :: tail -> a = head || is_contains a tail;;
+
+let rec is_unique_list lst =
+  match lst with
+  | [] -> true
+  | head :: tail -> not (is_contains head tail) && is_unique_list tail;;
+
+let is_reserved_word word =
+  (ormap (fun a -> word = a) reserved_word_list);;
+
+let is_contains_reserved_word lst =
+  ormap (fun a -> a) (List.map is_reserved_word lst);;
+
+let rec to_list x =
+  match x with
+  | Nil -> []
+  | Pair(e, Nil) -> [sexpr_to_string e]
+  | Pair(e, Pair(d, ds)) -> [sexpr_to_string e] @ to_list (Pair(d, ds))
+  | Pair(e, es) -> [sexpr_to_string e ; sexpr_to_string es]
+  | _ -> [];;
+
+(**************** Macro Expensions ****************)
+let expand_and sexprs =
+  match sexprs with
+  | Pair(e, Nil) -> e
+  | Pair(e, es) -> Pair(Symbol("if"), Pair(e, Pair(Pair(Symbol("and"), es), Pair(Bool(false), Nil))))
+  | _ -> raise X_syntax_error;;
+
+
 
 (**************** Tag Parsers ****************)
 
@@ -108,7 +139,8 @@ let rec tag_parse x =
   | Pair(Symbol("define"),Pair(var,Pair(e,Nil))) -> Def(tag_parse var, tag_parse e)
   | Pair(Symbol("lambda"), tail) -> tag_parse_lambda tail
   | Pair(Symbol("or"), sexprs) -> tag_parse_or sexprs
-  (* applic *)
+  | Pair(Symbol("and"), sexprs) -> tag_parse_and sexprs
+    (* applic *)
   | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
   (*Macro_expansions*)
   (* cond *)
@@ -122,9 +154,10 @@ and tag_parse_applic x =
   | Nil -> [Const(Sexpr(Nil))]
   | Pair(head, Nil) -> [tag_parse head]
   | Pair(head,tail) ->  [tag_parse head] @ tag_parse_applic tail
+  | _ -> raise X_syntax_error
 
 and tag_parse_variable x =
-  if (ormap (fun a -> x = a) reserved_word_list)
+  if (is_reserved_word x)
   then raise X_no_match
   else Var(x)
 
@@ -135,32 +168,49 @@ and tag_parse_explicitSeq x =
   | Pair(head, tail) -> Seq(List.flatten (List.map (fun expr -> match expr with
                                                                 | Seq(arr) -> arr
                                                                 | _ -> [expr]) (create_sequence x)))
+  | _ -> raise X_syntax_error
 
 and create_sequence x =
   match x with
   | Pair(head, Nil) -> [tag_parse head]
   | Pair(head, tail) -> [tag_parse head] @ create_sequence tail
+  | _ -> raise X_syntax_error
 
 and tag_parse_lambda x =
   match x with
   | Pair(args, body) when body <> Nil -> (* assuming body != Nil - no empty implicit sequence allowed*)
-      if (is_proper_list args)
-      then LambdaSimple((proper_to_string_list args),(tag_parse_explicitSeq body))
-      else match args with
-      | Symbol(vs) -> LambdaOpt([], vs, tag_parse_explicitSeq body)
-      | _ -> LambdaOpt(proper_to_string_list (improper_to_proper_list args), improper_list_last_elem args, tag_parse_explicitSeq body)(* improper list *)
+    (match args with
+    | Symbol(vs) -> if is_reserved_word vs
+                    then raise X_syntax_error
+                    else LambdaOpt([], vs, tag_parse_explicitSeq body)
+    | _ ->
+      if (is_unique_list (to_list args)) && not (is_contains_reserved_word (to_list args))
+      then if (is_proper_list args)
+          then LambdaSimple((to_list args),(tag_parse_explicitSeq body))
+          else LambdaOpt(to_list (improper_to_proper_list args), improper_list_last_elem args, tag_parse_explicitSeq body)
+      else raise X_syntax_error)
+  | _ -> raise X_syntax_error
 
 and tag_parse_or x =
   match x with
   | Nil -> Const(Sexpr(Bool(false)))
   | Pair(e, Nil) -> Or([tag_parse e])
   | Pair(e, es) -> Or([tag_parse e] @ or_args es)
+  | _ -> raise X_syntax_error
 
 and or_args x =
   match x with
   | Pair(e, Nil) -> [tag_parse e]
   | Pair(e, es) -> [tag_parse e] @ or_args es
+  | _ -> raise X_syntax_error
+
+and tag_parse_and x =
+  match x with
+  | Nil -> Const(Sexpr(Bool(true)))
+  | _ -> tag_parse (expand_and x)
 ;;
+
+
 let tag_parse_expressions sexpr =
   List.map tag_parse sexpr;;
 
