@@ -108,6 +108,17 @@ let rec to_list x =
   | Pair(e, es) -> [sexpr_to_string e ; sexpr_to_string es]
   | _ -> [];;
 
+let rec get_let_var_names x =
+  match x with
+  | Pair(Pair(var, sexpr), Nil) -> Pair(var, Nil)
+  | Pair(Pair(var, sexpr), nextVar) -> Pair(var, get_let_var_names nextVar)
+  | _ -> raise X_syntax_error;;
+
+let rec get_let_var_sexprs x =
+  match x with
+  | Pair(Pair(var, Pair(sexpr, Nil)), Nil) -> Pair(sexpr, Nil)
+  | Pair(Pair(var, Pair(sexpr, Nil)), nextVar) -> Pair(sexpr, get_let_var_sexprs nextVar)
+  | _ -> raise X_syntax_error;;
 (**************** Macro Expensions ****************)
 let expand_and sexprs =
   match sexprs with
@@ -115,7 +126,13 @@ let expand_and sexprs =
   | Pair(e, es) -> Pair(Symbol("if"), Pair(e, Pair(Pair(Symbol("and"), es), Pair(Bool(false), Nil))))
   | _ -> raise X_syntax_error;;
 
-
+let expand_let sexprs =
+  (*convert to Pair(lambda, let args)*)
+  match sexprs with
+  | Pair(vars, Nil) -> raise X_syntax_error (*no body for implicit sequence*)
+  | Pair(Nil, body) -> Pair(Pair(Symbol("lambda"), Pair(Nil, body)), Nil) (*of type (let () body)*)
+  | Pair(vars, body) -> Pair(Pair(Symbol("lambda"), Pair(get_let_var_names vars, body)), get_let_var_sexprs vars)
+  | _ -> raise X_syntax_error;;
 
 (**************** Tag Parsers ****************)
 
@@ -142,7 +159,8 @@ let rec tag_parse x =
   | Pair(Symbol("and"), sexprs) -> tag_parse_and sexprs
   (* cond *)
   | Pair(Symbol("cond"), listSexp) -> tag_parse_cond listSexp
-  (* applic *)
+  | Pair(Symbol("let"), sexprs) -> tag_parse_let sexprs
+    (* applic *)
   | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
   (*Macro_expansions*)
 
@@ -212,7 +230,12 @@ and tag_parse_and x =
   match x with
   | Nil -> Const(Sexpr(Bool(true)))
   | _ -> tag_parse (expand_and x)
-;;
+
+and tag_parse_let x =
+  match x with
+  | Pair(e, es) -> tag_parse (expand_let x)
+  | _ -> raise X_syntax_error
+  ;;
 
 
 let tag_parse_expressions sexpr =
