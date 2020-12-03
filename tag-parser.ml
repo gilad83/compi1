@@ -119,6 +119,12 @@ let rec get_let_var_sexprs x =
   | Pair(Pair(var, Pair(sexpr, Nil)), Nil) -> Pair(sexpr, Nil)
   | Pair(Pair(var, Pair(sexpr, Nil)), nextVar) -> Pair(sexpr, get_let_var_sexprs nextVar)
   | _ -> raise X_syntax_error;;
+
+let rec create_letrec_body x =
+  match x with
+  | Pair(Pair(Pair(v, sexpr), Nil), body) -> Pair(Pair(Symbol("set!"), Pair(v,sexpr)), Pair(Pair(Symbol("let"), Pair(Nil, body)), Nil))
+  | Pair(Pair(Pair(v, sexpr), vs), body) -> Pair(Pair(Symbol("set!"), Pair(v,sexpr)), create_letrec_body (Pair(vs, body)))
+  | _ -> raise X_syntax_error;;
 (**************** Macro Expensions ****************)
 let expand_and sexprs =
   match sexprs with
@@ -132,6 +138,11 @@ let expand_let sexprs =
   | Pair(vars, Nil) -> raise X_syntax_error (*no body for implicit sequence*)
   | Pair(Nil, body) -> Pair(Pair(Symbol("lambda"), Pair(Nil, body)), Nil) (*of type (let () body)*)
   | Pair(vars, body) -> Pair(Pair(Symbol("lambda"), Pair(get_let_var_names vars, body)), get_let_var_sexprs vars)
+  | _ -> raise X_syntax_error;;
+
+let expand_letrec sexprs =
+  match sexprs with
+  | Pair(vars, body) -> Pair(Symbol("let"), Pair(vars, create_letrec_body sexprs)) 
   | _ -> raise X_syntax_error;;
 
 (**************** Tag Parsers ****************)
@@ -159,6 +170,7 @@ let rec tag_parse x =
   | Pair(Symbol("and"), sexprs) -> tag_parse_and sexprs
   | Pair(Symbol("let"), sexprs) -> tag_parse_let sexprs
   | Pair(Symbol("let*"), sexprs) -> tag_parse_letstar sexprs
+  | Pair(Symbol("letrec"), sexprs) -> tag_parse_letrec sexprs
   | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
 
 and tag_parse_applic x =
@@ -231,6 +243,11 @@ and tag_parse_letstar x =
   | Pair(Nil, body) -> tag_parse_let x
   | Pair(Pair(Pair(var, sexpr), Nil), body) -> tag_parse_let x
   | Pair(Pair(Pair(var, sexpr), vars), body) -> tag_parse (Pair(Symbol("let"), Pair(Pair(Pair(var, sexpr), Nil), Pair(Pair(Symbol("let*"), Pair(vars, body)), Nil))))
+  | _ -> raise X_syntax_error
+
+and tag_parse_letrec x = 
+  match x with
+  | Pair(vars, body) -> tag_parse (expand_letrec x)
   | _ -> raise X_syntax_error
   ;;
 
