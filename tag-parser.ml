@@ -158,6 +158,7 @@ let rec tag_parse x =
   | Pair(Symbol("or"), sexprs) -> tag_parse_or sexprs
   | Pair(Symbol("and"), sexprs) -> tag_parse_and sexprs
   | Pair(Symbol("let"), sexprs) -> tag_parse_let sexprs
+  | Pair(Symbol("let*"), sexprs) -> tag_parse_letstar sexprs
   | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
 
 and tag_parse_applic x =
@@ -222,7 +223,14 @@ and tag_parse_and x =
 
 and tag_parse_let x =
   match x with
-  | Pair(e, es) -> tag_parse (expand_let x)
+  | Pair(vars, body) -> tag_parse (expand_let x)
+  | _ -> raise X_syntax_error
+
+and tag_parse_letstar x =
+  match x with 
+  | Pair(Nil, body) -> tag_parse_let x
+  | Pair(Pair(Pair(var, sexpr), Nil), body) -> tag_parse_let x
+  | Pair(Pair(Pair(var, sexpr), vars), body) -> tag_parse (Pair(Symbol("let"), Pair(Pair(Pair(var, sexpr), Nil), Pair(Pair(Symbol("let*"), Pair(vars, body)), Nil))))
   | _ -> raise X_syntax_error
   ;;
 
