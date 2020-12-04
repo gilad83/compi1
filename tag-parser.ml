@@ -147,6 +147,16 @@ let expand_letrec sexprs =
   | Pair(vars, body) -> Pair(Symbol("let"), Pair(vars, create_letrec_body sexprs))
   | _ -> raise X_syntax_error;;
 
+let rec expand_quasiquote sexprs = 
+  match sexprs with
+  | Pair(Symbol("unquote"), Pair(sexpr, Nil)) -> sexpr
+  | Pair(Symbol("unquote-splicing"), Pair(sexpr, Nil)) -> raise X_syntax_error
+  | Nil -> Pair(Symbol("quote"), Pair(Nil, Nil))
+  | Symbol(sym) -> Pair(Symbol("quote"), Pair(Symbol(sym), Nil))
+  | Pair(Pair(Symbol("unquote-splicing"), Pair(sexpr, Nil)), b) -> Pair(Symbol("append"), Pair(sexpr, Pair(expand_quasiquote b, Nil)))
+  | Pair(s1, s2) -> Pair(Symbol("cons"), Pair(expand_quasiquote s1, Pair(expand_quasiquote s2, Nil)))
+  | _ -> sexprs;;
+ 
 (**************** Tag Parsers ****************)
 
 let rec tag_parse x =
@@ -158,6 +168,7 @@ let rec tag_parse x =
   | String(x) -> Const(Sexpr(String(x)))
   | Symbol(x) -> (tag_parse_variable x)
   | Pair(Symbol("quote"), Pair(x, Nil)) -> Const(Sexpr(x))
+  | Pair(Symbol("quasiquote"), Pair(sexprs, Nil)) -> tag_parse_quasiquote sexprs
   (*if than else*)
   | Pair(Symbol("if"), Pair(test, Pair(dit, Pair(dif, Nil)))) ->
       If(tag_parse test, tag_parse dit, tag_parse dif)
@@ -282,6 +293,9 @@ and tag_parse_letrec x =
   match x with
   | Pair(vars, body) -> tag_parse (expand_letrec x)
   | _ -> raise X_syntax_error
+
+and tag_parse_quasiquote x =
+  tag_parse (expand_quasiquote x)
   ;;
 
 
