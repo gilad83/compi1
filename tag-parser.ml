@@ -164,7 +164,10 @@ let rec tag_parse x =
       If(tag_parse test, tag_parse dit, Const(Void))
   | Pair(Symbol("begin"), tail) -> tag_parse_explicitSeq tail
   | Pair(Symbol("set!"),Pair(var,Pair(e,Nil))) -> Set(tag_parse var, tag_parse e)
-  | Pair(Symbol("define"),Pair(var,Pair(e,Nil))) -> Def(tag_parse var, tag_parse e)
+  (* Mit define *)
+  | Pair(Symbol "define", Pair(Pair(var,arglist),exp_plus)) -> expand_mit_define var arglist exp_plus
+    (*define*)
+  | Pair(Symbol("define"),Pair(var,exp)) -> tag_parse_Def var exp
   | Pair(Symbol("lambda"), tail) -> tag_parse_lambda tail
   | Pair(Symbol("or"), sexprs) -> tag_parse_or sexprs
   | Pair(Symbol("and"), sexprs) -> tag_parse_and sexprs
@@ -176,6 +179,16 @@ let rec tag_parse x =
       (* applic *)
   | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
   (*Macro_expansions*)
+
+and tag_parse_Def var exp =
+match exp with
+ Nil -> Def(tag_parse var,Const(Void))
+| Pair(concrete_exp,Nil) -> Def(tag_parse var, tag_parse concrete_exp)
+| _ -> raise X_syntax_error
+
+and expand_mit_define var arglist exp_plus =
+tag_parse (Pair(Symbol "define", Pair(var, Pair(Pair(Symbol("lambda"), Pair( arglist, exp_plus)),Nil))))
+
 
 
 and tag_parse_cond x =
@@ -194,7 +207,7 @@ Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pai
 |Pair(Pair(test, Pair(Symbol "=>", Pair(dit_apply, Nil))),cont) -> Pair(Symbol "let", Pair(Pair(Pair(Symbol "value", Pair(Pair(test, Nil), Nil)),
  Pair(Pair(Symbol "f", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(Pair(dit_apply, Nil), Nil))), Nil)),
   Pair(Pair(Symbol "rest", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(Pair((tag_parse_cond cont), Nil), Nil))), Nil)), Nil))),
-   Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pair(Symbol "valueWhat", Nil)), Pair(Pair(Symbol "restWHat", Nil), Nil)))), Nil)))
+   Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pair(Symbol "value", Nil)), Pair(Pair(Symbol "rest", Nil), Nil)))), Nil)))
 
 
 
