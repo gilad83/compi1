@@ -125,6 +125,8 @@ let rec create_letrec_body x =
   | Pair(Pair(Pair(v, sexpr), Nil), body) -> Pair(Pair(Symbol("set!"), Pair(v,sexpr)), Pair(Pair(Symbol("let"), Pair(Nil, body)), Nil))
   | Pair(Pair(Pair(v, sexpr), vs), body) -> Pair(Pair(Symbol("set!"), Pair(v,sexpr)), create_letrec_body (Pair(vs, body)))
   | _ -> raise X_syntax_error;;
+
+
 (**************** Macro Expensions ****************)
 let expand_and sexprs =
   match sexprs with
@@ -180,29 +182,29 @@ let rec tag_parse x =
 
 and tag_parse_cond x =
  match x with
-(* (else form) *)
-Pair(Pair(Symbol("else"),dit),_) -> Pair(Symbol("begin"),dit)
-(* The arrow-form no cont *)
-|Pair(Pair(test, Pair(Symbol "=>", Pair(dit_apply, Nil))),Nil) ->
-Pair(Symbol "let", Pair(Pair(Pair(Symbol "value", Pair(test, Nil)),
-Pair(Pair(Symbol "f", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(dit_apply, Nil))), Nil)), Nil)),
-Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pair(Symbol "value", Nil)), Nil))), Nil)))
+  (* (else form) *)
+  Pair(Pair(Symbol("else"),dit),_) -> Pair(Symbol("begin"),dit)
+  (* The arrow-form no cont *)
+  |Pair(Pair(test, Pair(Symbol "=>", Pair(dit_apply, Nil))),Nil) ->
+    Pair(Symbol "let", Pair(Pair(Pair(Symbol "value", Pair(test, Nil)),
+    Pair(Pair(Symbol "f", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(dit_apply, Nil))), Nil)), Nil)),
+    Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pair(Symbol "value", Nil)), Nil))), Nil)))
 
 
 
-(* The arrow-form with cont *)
-|Pair(Pair(test, Pair(Symbol "=>", Pair(dit_apply, Nil))),cont) -> Pair(Symbol "let", Pair(Pair(Pair(Symbol "value", Pair(Pair(test, Nil), Nil)),
- Pair(Pair(Symbol "f", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(Pair(dit_apply, Nil), Nil))), Nil)),
-  Pair(Pair(Symbol "rest", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(Pair((tag_parse_cond cont), Nil), Nil))), Nil)), Nil))),
-   Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pair(Symbol "valueWhat", Nil)), Pair(Pair(Symbol "restWHat", Nil), Nil)))), Nil)))
+  (* The arrow-form with cont *)
+  |Pair(Pair(test, Pair(Symbol "=>", Pair(dit_apply, Nil))),cont) -> Pair(Symbol "let", Pair(Pair(Pair(Symbol "value", Pair(Pair(test, Nil), Nil)),
+    Pair(Pair(Symbol "f", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(Pair(dit_apply, Nil), Nil))), Nil)),
+    Pair(Pair(Symbol "rest", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(Pair((tag_parse_cond cont), Nil), Nil))), Nil)), Nil))),
+    Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pair(Symbol "valueWhat", Nil)), Pair(Pair(Symbol "restWHat", Nil), Nil)))), Nil)))
 
 
 
-(* (common form) *)
-|Pair(Pair(test,dit),Nil) -> (Pair(Symbol"if",Pair(test, Pair(Pair(Symbol("begin"),dit), Nil))))
-|Pair(Pair(test,dit),next_rib) -> let next_rib = tag_parse_cond next_rib in
-(Pair(Symbol"if",Pair(test, Pair(Pair(Symbol("begin"),dit), Pair(next_rib,Nil)))))
-|_ -> raise X_syntax_error
+  (* (common form) *)
+  |Pair(Pair(test,dit),Nil) -> (Pair(Symbol"if",Pair(test, Pair(Pair(Symbol("begin"),dit), Nil))))
+  |Pair(Pair(test,dit),next_rib) -> let next_rib = tag_parse_cond next_rib in
+  (Pair(Symbol"if",Pair(test, Pair(Pair(Symbol("begin"),dit), Pair(next_rib,Nil)))))
+  |_ -> raise X_syntax_error
 
 and tag_parse_applic x =
   match x with
