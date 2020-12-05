@@ -257,7 +257,7 @@ let rparen = (char ')');;
       nt str
     and nt_dotted_list str =
       let garbage = disj_list[(pack nt_whitespace (fun e -> Nil));nt_line_comment;nt_sexpr_comment] in
-      let dot_spaced = make_paired (star garbage) (plus garbage) dot  in
+      let dot_spaced = caten (star garbage)  dot  in
       let inside = caten (plus nt_sexpr) (caten dot_spaced nt_sexpr) in
       let nt = caten lparen (caten inside rparen) in
       let nt = pack nt (

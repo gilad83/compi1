@@ -46,7 +46,7 @@ let rec expr_eq e1 e2 =
 
 
 exception X_syntax_error;;
-
+exception X_syntax_reverse;;
 module type TAG_PARSER = sig
   val tag_parse_expressions : sexpr list -> expr list
 end;; (* signature TAG_PARSER *)
@@ -94,6 +94,14 @@ let rec is_unique_list lst =
   | [] -> true
   | head :: tail -> not (is_contains head tail) && is_unique_list tail;;
 
+let rec prepare_exp_gen_sym list_of_set_vars str  =
+  match list_of_set_vars with
+  | [] -> str
+  | head :: tail ->
+    (match head with
+    | Pair(var, Pair(Symbol(val_name), Nil)) -> prepare_exp_gen_sym tail str ^ val_name
+    | _ -> prepare_exp_gen_sym tail str);;
+
 let is_reserved_word word =
   (ormap (fun a -> word = a) reserved_word_list);;
 
@@ -126,7 +134,52 @@ let rec create_letrec_body x =
   | Pair(Pair(Pair(v, sexpr), vs), body) -> Pair(Pair(Symbol("set!"), Pair(v,sexpr)), create_letrec_body (Pair(vs, body)))
   | _ -> raise X_syntax_error;;
 
+  let rec sexprs_to_list_of_set_vars sexprs =
+    match sexprs with
+  | Pair(set,Nil) -> [set]
+  | Pair(set,next_set) -> (sexprs_to_list_of_set_vars next_set) @ [set]
+  | _ -> raise X_syntax_error;;
 
+let singel_assign_of_let head num_of_sets gen_sym =
+  match head with
+  |Pair(var_name,Pair(exp_to_set,rest)) -> Pair(Symbol(gen_sym ^ string_of_int num_of_sets),
+  Pair(exp_to_set,Nil))
+  |Pair(var_name,exp_to_set) -> Pair(Symbol(gen_sym ^ string_of_int num_of_sets),
+  Pair(exp_to_set,Nil))
+  |_ -> raise X_syntax_error;;
+
+let rec list_to_let_assignments list_of_set_vars num_of_sets gen_sym pairs=
+  match list_of_set_vars with
+  | [] -> pairs
+  | head::tail -> list_to_let_assignments
+    tail (num_of_sets + 1) gen_sym (Pair((singel_assign_of_let head num_of_sets gen_sym),pairs));;
+
+let singel_pair_of_set set_var val_name =
+  match set_var with
+  | Pair(var_name,Pair(exp_to_set,rest))
+  -> Pair(Symbol("set!"),Pair(var_name,(Pair(val_name,Nil))))
+
+  |Pair(var_name,exp_to_set)
+  -> Pair(Symbol("set!"),Pair(var_name,(Pair(val_name,Nil))))
+
+  |_ -> raise X_syntax_error;;
+
+let rec list_to_set_pairs list_of_set_vars pair_of_let_assignments pairs =
+  match list_of_set_vars,pair_of_let_assignments with
+  | [], _ -> pairs
+  | head::tail, Pair(Pair(first_val,Pair(sec_val,Nil)),rest) -> list_to_set_pairs
+    tail rest (Pair((singel_pair_of_set head first_val),pairs))
+  |_,_ -> raise X_syntax_error;;
+
+let rec reverse_pair pair_of_let_assignments pairs =
+  match  pair_of_let_assignments with
+  |Pair(Pair (c,Pair (d, Nil)), Nil) -> Pair (c,Pair (d, Nil))
+  |Pair(Pair(first_val,Pair(sec_val,Nil)),rest)-> Pair(reverse_pair rest pairs,Pair (Pair(first_val,Pair(sec_val,Nil)),Nil))
+  | _ -> raise X_syntax_reverse;;
+(*
+  Pair (Pair (Symbol "c", Pair (Symbol "d", Nil)), Pair (Symbol "a", Pair (Symbol "b", Nil)))
+  Pair (Pair (Symbol "a", Pair (Symbol "b", Nil)), Pair (Pair (Symbol "c", Pair (Symbol "d", Nil)), Nil))
+*)
 (**************** Macro Expensions ****************)
 let expand_and sexprs =
   match sexprs with
@@ -157,6 +210,13 @@ let rec expand_quasiquote sexprs =
   | Pair(s1, Pair(Symbol("unquote-splicing"), Pair(s2, Nil))) -> Pair(Symbol("cons"), Pair(expand_quasiquote s1, Pair(s2, Nil))) (*added it to make specific test pass = `(,a . ,@b)*)
   | Pair(s1, s2) -> Pair(Symbol("cons"), Pair(expand_quasiquote s1, Pair(expand_quasiquote s2, Nil)))
   | _ -> sexprs;;
+
+  let reverse_list l =
+    let rec rev_acc acc = function
+      | [] -> acc
+      | hd::tl -> rev_acc (hd::acc) tl
+    in
+    rev_acc [] l ;;
 
 (**************** Tag Parsers ****************)
 
@@ -190,10 +250,30 @@ let rec tag_parse x =
   | Pair(Symbol("let"), sexprs) -> tag_parse_let sexprs
   | Pair(Symbol("let*"), sexprs) -> tag_parse_letstar sexprs
   | Pair(Symbol("letrec"), sexprs) -> tag_parse_letrec sexprs
-  | Pair(Symbol("pset!"), sexprs) -> tag_parse sexprs
+  | Pair(Symbol("pset!"), sexprs) ->  expand_pset sexprs
       (* applic *)
   | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
   (*Macro_expansions*)
+
+and expand_pset pset_expr =
+  let list_of_set_vars = sexprs_to_list_of_set_vars pset_expr in
+  let list_of_set_vars_rev = reverse_list list_of_set_vars in
+  if (List.length list_of_set_vars == 1) then
+  only_one_set pset_expr
+  else
+  let gen_sym =  prepare_exp_gen_sym list_of_set_vars "exp" in
+  let pair_of_let_assignments = list_to_let_assignments list_of_set_vars 0 gen_sym Nil in
+  let pair_of_sets = list_to_set_pairs list_of_set_vars_rev pair_of_let_assignments Nil in
+  tag_parse (Pair (Symbol "let",
+  Pair (pair_of_let_assignments,
+  Pair (Pair(Symbol("begin"),pair_of_sets), Nil))))
+
+  (* raise X_syntax_error *)
+
+and only_one_set pset_expr =
+  (match pset_expr with
+  | Pair(set, Nil) -> tag_parse (Pair(Symbol("set!"), set))
+  | _ -> raise X_syntax_error)
 
 and tag_parse_Def var exp =
 match exp with
@@ -323,4 +403,5 @@ end;; (* struct Tag_Parser *)
 open Tag_Parser;;
 let test_tag_parse str =
   tag_parse_expressions (read_sexprs str);;
+
 
