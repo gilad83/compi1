@@ -150,7 +150,7 @@ let expand_letrec sexprs =
 let rec tag_parse x =
   match x with
   | Bool(x) -> Const(Sexpr(Bool(x)))
-  | Nil -> Const(Sexpr(Nil))
+  | Nil -> Const(Void)
   | Number(x) -> Const(Sexpr(Number(x)))
   | Char(x) -> Const(Sexpr(Char(x)))
   | String(x) -> Const(Sexpr(String(x)))
@@ -176,6 +176,7 @@ let rec tag_parse x =
   | Pair(Symbol("let"), sexprs) -> tag_parse_let sexprs
   | Pair(Symbol("let*"), sexprs) -> tag_parse_letstar sexprs
   | Pair(Symbol("letrec"), sexprs) -> tag_parse_letrec sexprs
+  | Pair(Symbol("pset!"), sexprs) -> tag_parse sexprs
       (* applic *)
   | Pair( proc,listexp) -> Applic(tag_parse proc, tag_parse_applic listexp)
   (*Macro_expansions*)
@@ -306,5 +307,3 @@ open Tag_Parser;;
 let test_tag_parse str =
   tag_parse_expressions (read_sexprs str);;
 
-let test_tag_exp exp =
-    tag_parse_expressions exp;;
