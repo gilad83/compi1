@@ -153,7 +153,8 @@ let rec expand_quasiquote sexprs =
   | Pair(Symbol("unquote-splicing"), Pair(sexpr, Nil)) -> raise X_syntax_error
   | Nil -> Pair(Symbol("quote"), Pair(Nil, Nil))
   | Symbol(sym) -> Pair(Symbol("quote"), Pair(Symbol(sym), Nil))
-  | Pair(Pair(Symbol("unquote-splicing"), Pair(sexpr, Nil)), b) -> Pair(Symbol("append"), Pair(sexpr, Pair(expand_quasiquote b, Nil)))
+  | Pair(Pair(Symbol("unquote-splicing"), Pair(sexpr, Nil)), s) -> Pair(Symbol("append"), Pair(sexpr, Pair(expand_quasiquote s, Nil)))
+  | Pair(s1, Pair(Symbol("unquote-splicing"), Pair(s2, Nil))) -> Pair(Symbol("cons"), Pair(expand_quasiquote s1, Pair(s2, Nil))) (*added it to make specific test pass = `(,a . ,@b)*)
   | Pair(s1, s2) -> Pair(Symbol("cons"), Pair(expand_quasiquote s1, Pair(expand_quasiquote s2, Nil)))
   | _ -> sexprs;;
  
@@ -219,7 +220,7 @@ and tag_parse_cond x =
 
 and tag_parse_applic x =
   match x with
-  | Nil -> [Const(Sexpr(Nil))]
+  | Nil -> []
   | Pair(head, Nil) -> [tag_parse head]
   | Pair(head,tail) ->  [tag_parse head] @ tag_parse_applic tail
   | _ -> raise X_syntax_error
