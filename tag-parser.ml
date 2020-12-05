@@ -125,6 +125,8 @@ let rec create_letrec_body x =
   | Pair(Pair(Pair(v, sexpr), Nil), body) -> Pair(Pair(Symbol("set!"), Pair(v,sexpr)), Pair(Pair(Symbol("let"), Pair(Nil, body)), Nil))
   | Pair(Pair(Pair(v, sexpr), vs), body) -> Pair(Pair(Symbol("set!"), Pair(v,sexpr)), create_letrec_body (Pair(vs, body)))
   | _ -> raise X_syntax_error;;
+
+
 (**************** Macro Expensions ****************)
 let expand_and sexprs =
   match sexprs with
@@ -145,6 +147,17 @@ let expand_letrec sexprs =
   | Pair(vars, body) -> Pair(Symbol("let"), Pair(vars, create_letrec_body sexprs))
   | _ -> raise X_syntax_error;;
 
+let rec expand_quasiquote sexprs =
+  match sexprs with
+  | Pair(Symbol("unquote"), Pair(sexpr, Nil)) -> sexpr
+  | Pair(Symbol("unquote-splicing"), Pair(sexpr, Nil)) -> raise X_syntax_error
+  | Nil -> Pair(Symbol("quote"), Pair(Nil, Nil))
+  | Symbol(sym) -> Pair(Symbol("quote"), Pair(Symbol(sym), Nil))
+  | Pair(Pair(Symbol("unquote-splicing"), Pair(sexpr, Nil)), s) -> Pair(Symbol("append"), Pair(sexpr, Pair(expand_quasiquote s, Nil)))
+  | Pair(s1, Pair(Symbol("unquote-splicing"), Pair(s2, Nil))) -> Pair(Symbol("cons"), Pair(expand_quasiquote s1, Pair(s2, Nil))) (*added it to make specific test pass = `(,a . ,@b)*)
+  | Pair(s1, s2) -> Pair(Symbol("cons"), Pair(expand_quasiquote s1, Pair(expand_quasiquote s2, Nil)))
+  | _ -> sexprs;;
+
 (**************** Tag Parsers ****************)
 
 let rec tag_parse x =
@@ -156,6 +169,7 @@ let rec tag_parse x =
   | String(x) -> Const(Sexpr(String(x)))
   | Symbol(x) -> (tag_parse_variable x)
   | Pair(Symbol("quote"), Pair(x, Nil)) -> Const(Sexpr(x))
+  | Pair(Symbol("quasiquote"), Pair(sexprs, Nil)) -> tag_parse_quasiquote sexprs
   (*if than else*)
   | Pair(Symbol("if"), Pair(test, Pair(dit, Pair(dif, Nil)))) ->
       If(tag_parse test, tag_parse dit, tag_parse dif)
@@ -194,13 +208,13 @@ tag_parse (Pair(Symbol "define", Pair(var, Pair(Pair(Symbol("lambda"), Pair( arg
 
 and tag_parse_cond x =
  match x with
-(* (else form) *)
-Pair(Pair(Symbol("else"),dit),_) -> Pair(Symbol("begin"),dit)
-(* The arrow-form no cont *)
-|Pair(Pair(test, Pair(Symbol "=>", Pair(dit_apply, Nil))),Nil) ->
-Pair(Symbol "let", Pair(Pair(Pair(Symbol "value", Pair(test, Nil)),
-Pair(Pair(Symbol "f", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(dit_apply, Nil))), Nil)), Nil)),
-Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pair(Symbol "value", Nil)), Nil))), Nil)))
+  (* (else form) *)
+  Pair(Pair(Symbol("else"),dit),_) -> Pair(Symbol("begin"),dit)
+  (* The arrow-form no cont *)
+  |Pair(Pair(test, Pair(Symbol "=>", Pair(dit_apply, Nil))),Nil) ->
+    Pair(Symbol "let", Pair(Pair(Pair(Symbol "value", Pair(test, Nil)),
+    Pair(Pair(Symbol "f", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(dit_apply, Nil))), Nil)), Nil)),
+    Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pair(Symbol "value", Nil)), Nil))), Nil)))
 
 
 
@@ -212,15 +226,15 @@ Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pai
 
 
 
-(* (common form) *)
-|Pair(Pair(test,dit),Nil) -> (Pair(Symbol"if",Pair(test, Pair(Pair(Symbol("begin"),dit), Nil))))
-|Pair(Pair(test,dit),next_rib) -> let next_rib = tag_parse_cond next_rib in
-(Pair(Symbol"if",Pair(test, Pair(Pair(Symbol("begin"),dit), Pair(next_rib,Nil)))))
-|_ -> raise X_syntax_error
+  (* (common form) *)
+  |Pair(Pair(test,dit),Nil) -> (Pair(Symbol"if",Pair(test, Pair(Pair(Symbol("begin"),dit), Nil))))
+  |Pair(Pair(test,dit),next_rib) -> let next_rib = tag_parse_cond next_rib in
+  (Pair(Symbol"if",Pair(test, Pair(Pair(Symbol("begin"),dit), Pair(next_rib,Nil)))))
+  |_ -> raise X_syntax_error
 
 and tag_parse_applic x =
   match x with
-  | Nil -> [Const(Sexpr(Nil))]
+  | Nil -> []
   | Pair(head, Nil) -> [tag_parse head]
   | Pair(head,tail) ->  [tag_parse head] @ tag_parse_applic tail
   | _ -> raise X_syntax_error
@@ -294,6 +308,9 @@ and tag_parse_letrec x =
   match x with
   | Pair(vars, body) -> tag_parse (expand_letrec x)
   | _ -> raise X_syntax_error
+
+and tag_parse_quasiquote x =
+  tag_parse (expand_quasiquote x)
   ;;
 
 
