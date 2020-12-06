@@ -10,6 +10,7 @@
 test
 tests
 ass_2_tests.ml
+tag_parser_test.ml
 
 # ocamlbuild working directory
 _build/

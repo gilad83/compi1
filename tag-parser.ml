@@ -290,19 +290,32 @@ and tag_parse_cond x =
  match x with
   (* (else form) *)
   Pair(Pair(Symbol("else"),dit),_) -> Pair(Symbol("begin"),dit)
+
   (* The arrow-form no cont *)
   |Pair(Pair(test, Pair(Symbol "=>", Pair(dit_apply, Nil))),Nil) ->
     Pair(Symbol "let", Pair(Pair(Pair(Symbol "value", Pair(test, Nil)),
     Pair(Pair(Symbol "f", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(dit_apply, Nil))), Nil)), Nil)),
     Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pair(Symbol "value", Nil)), Nil))), Nil)))
 
-
-
-(* The arrow-form with cont *)
-|Pair(Pair(test, Pair(Symbol "=>", Pair(dit_apply, Nil))),cont) -> Pair(Symbol "let", Pair(Pair(Pair(Symbol "value", Pair(Pair(test, Nil), Nil)),
- Pair(Pair(Symbol "f", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(Pair(dit_apply, Nil), Nil))), Nil)),
-  Pair(Pair(Symbol "rest", Pair(Pair(Symbol "lambda", Pair(Nil, Pair(Pair((tag_parse_cond cont), Nil), Nil))), Nil)), Nil))),
-   Pair(Pair(Symbol "if", Pair(Symbol "value", Pair(Pair(Pair(Symbol "f", Nil), Pair(Symbol "value", Nil)), Pair(Pair(Symbol "rest", Nil), Nil)))), Nil)))
+  (* The arrow-form with cont *)
+  |Pair(Pair(test, Pair(Symbol "=>", Pair(dit_apply, Nil))),cont) -> Pair (Symbol "let",                                                                                                                                                                                             Pair
+  (Pair (Pair (Symbol "value", Pair (test, Nil)),
+    Pair
+     (Pair (Symbol "f",
+       Pair
+        (Pair (Symbol "lambda", Pair (Nil, Pair (dit_apply, Nil))),
+        Nil)),
+     Pair
+      (Pair (Symbol "rest",
+        Pair (Pair (Symbol "lambda", Pair (Nil, Pair (tag_parse_cond cont, Nil))),
+         Nil)),
+      Nil))),
+  Pair
+   (Pair (Symbol "if",
+     Pair (Symbol "value",
+      Pair (Pair (Pair (Symbol "f", Nil), Pair (Symbol "value", Nil)),
+       Pair (Pair (Symbol "rest", Nil), Nil)))),
+   Nil)))
 
 
 
